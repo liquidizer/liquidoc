@@ -11,6 +11,8 @@ import org.liquidizer.doc.lib._
 
 class Document {
 
+  println("Document created")
+
   val uri= S.uri
 
   val rootId= S.param("root").map{ _.toLong }.getOrElse(1L)

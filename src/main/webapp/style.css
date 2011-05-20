@@ -23,7 +23,7 @@ li img {
 }
 
 .deleted {
-    background-color: coral;
+    color: gray;
     text-decoration: line-through;
 }
 

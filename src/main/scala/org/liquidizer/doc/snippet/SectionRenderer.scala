@@ -93,22 +93,29 @@ class SectionRenderer(val ref : Content, var show : Content) {
 
   def branchArea() : NodeSeq = <div id={"branches"+id}>{ branches() }</div>
 
-  def branches() : NodeSeq = <ul>{ branches(ref) }</ul>
+  def branches() : NodeSeq = {
 
-  def branches(cur : Content) : NodeSeq = {
-    <li> {
-      val src= if (cur==show) "active" else "inactive"
-      val refs= TagRef.findAll(By(TagRef.content, cur))
-      SHtml.a(() => { show= cur; redraw()}, 
-	      <img src={"/images/"+src+".png"}/>) ++ {
-	if (refs.isEmpty) NodeSeq.Empty
-	else tagLink(refs.first.tag.obj.get)
-      } ++ {
-        val alts= Content.findAll(By(Content.parent, cur))
-        if (alts.isEmpty) NodeSeq.Empty else
-          <ul>{ alts.flatMap{ branches(_) } }</ul>
-      }
-    } </li>
+    var parents= List(show)
+    while(parents.head.parent.defined_?) 
+      parents ::= parents.head.parent.obj.get
+
+    def branches(cur : Content) : NodeSeq = {
+      <li> {
+        val src= if (cur==show) "active" else "inactive"
+        val refs= TagRef.findAll(By(TagRef.content, cur))
+        SHtml.a(() => { show= cur; redraw()}, 
+    	      <img src={"/images/"+src+".png"}/>) ++ {
+    	if (refs.isEmpty) NodeSeq.Empty
+    	else tagLink(refs.first.tag.obj.get)
+        } ++ {
+          val alts= Content.findAll(By(Content.parent, cur))
+          if (!parents.contains(cur) || alts.isEmpty) NodeSeq.Empty else
+            <ul>{ alts.flatMap{ branches(_) } }</ul>
+        }
+      } </li>
+    }
+    <ul>{ branches(ref) }</ul>
+
   }
 
   def tagLink(tag : Tag) = {
