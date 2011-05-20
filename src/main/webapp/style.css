@@ -1,0 +1,52 @@
+body {
+    margin: 5px;
+}
+table {
+    width:100%;
+    cell-padding: 1px;
+}
+td {
+    vertical-align: top;
+    margin: 1px;
+    padding: 1px;
+}
+
+li {
+    list-style: none;
+}
+li img {
+    margin: 0 10px 0 0;
+}
+
+.inserted {
+    background-color: yellow;
+}
+
+.deleted {
+    background-color: coral;
+    text-decoration: line-through;
+}
+
+.section-h1 {
+    font-size: 16pt;
+    font-weight : bold;
+}
+
+.section-h2 {
+    font-size: 14pt;
+    font-weight : bold;
+}
+
+.section-ol {
+    margin: 1px 1px 1px 20px;
+}
+
+.section-p {
+    font-size: 11pt;
+}
+.section-ol {
+    font-size: 11pt;
+}
+.section-ul {
+    font-size: 11pt;
+}

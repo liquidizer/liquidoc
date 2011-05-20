@@ -1,0 +1,16 @@
+<lift:surround with="default">
+  <lift:bind-at name="content">
+    <lift:Document form="POST">
+      <table>
+	<doc:content-tr>
+	  <td width="5%"><sec:edit/></td>
+	  <td width="75%"><sec:content/></td>
+	  <td width="20%"><sec:branches/></td>
+	</doc:content-tr>
+      </table>
+      <hr/>
+      <doc:tagName/><doc:makeTag/>
+    </lift:Document>
+  </lift:bind-at>
+</lift:surround>
+
