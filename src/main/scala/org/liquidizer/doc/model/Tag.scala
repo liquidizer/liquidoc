@@ -8,6 +8,7 @@ class Tag extends LongKeyedMapper[Tag] with IdPK {
   def getSingleton = Tag
   object name extends MappedString(this, 50)
 
+  object parent extends LongMappedMapper(this, Tag)
   object head extends LongMappedMapper(this, Section)
 
   def contents() = 
@@ -22,7 +23,6 @@ class TagRef extends LongKeyedMapper[TagRef] with IdPK {
 
   object tag extends LongMappedMapper(this, Tag)
   object content extends LongMappedMapper(this, Content)
-
 }
 
 object TagRef extends TagRef with LongKeyedMetaMapper[TagRef] {

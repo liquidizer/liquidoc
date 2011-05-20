@@ -3,6 +3,8 @@ package org.liquidizer.doc.snippet
 import scala.xml._
 import net.liftweb.util._
 import net.liftweb.http._
+import net.liftweb.http.js._
+import net.liftweb.http.js.JsCmds._
 import net.liftweb.common._
 import net.liftweb.mapper._
 
@@ -35,11 +37,14 @@ class Document {
       case "content-tr" => render(showTag.head.obj.get, children)
       case "tagName" => SHtml.text(name, name= _)
       case "makeTag" => SHtml.ajaxSubmit("MakeTag", () => {
-        val newTag = Tag.create.name(name).head(rootTag.head.obj.get)
+	val head= rootTag.head.obj.get
+        val newTag = Tag.create.name(name).head(head).parent(rootTag)
 	newTag.save
         helpers.foreach { _.makeTag(newTag) }
-	S.redirectTo(Helpers.appendParams(uri, 
-	  Seq("root" -> rootId.toString, "show" -> newTag.id.is.toString)))
+	val params= Seq("root"->rootId.toString, "show"->newTag.id.is.toString)
+	val paramUri= Helpers.appendParams("/index.html", params)
+	println(paramUri)
+	RedirectTo(paramUri)
         })
     }
 
