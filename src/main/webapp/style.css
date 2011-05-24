@@ -18,6 +18,11 @@ li img {
     margin: 0 10px 0 0;
 }
 
+.error {
+    color: #CC0000;
+    font-weight: bold;
+}
+
 .inserted {
     background-color: yellow;
 }

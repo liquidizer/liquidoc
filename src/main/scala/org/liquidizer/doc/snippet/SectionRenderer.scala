@@ -49,9 +49,7 @@ class SectionRenderer(val ref : Content, var show : Content) {
   def insertButton() = SHtml.ajaxButton("Insert", () => Noop)
 
   def toEditMode() = {
-    show= Content.create
-    .parent(show).section(show.section.is)
-    .text(show.text.is).style(show.style.is)
+    show= Content.create.parent(show).text(show.text.is).style(show.style.is)
     SetHtml("content"+id, editArea()) &
     SetHtml("edit"+id, saveButton())
   }
@@ -125,6 +123,8 @@ class SectionRenderer(val ref : Content, var show : Content) {
   }
 
   def makeTag(tag : Tag) {
+    if (show.dirty_?)
+      save()
     TagRef.create.tag(tag).content(show).save
   }
 }

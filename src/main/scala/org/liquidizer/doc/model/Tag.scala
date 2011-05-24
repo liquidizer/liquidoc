@@ -9,10 +9,14 @@ class Tag extends LongKeyedMapper[Tag] with IdPK {
   object name extends MappedString(this, 50)
 
   object parent extends LongMappedMapper(this, Tag)
-  object head extends LongMappedMapper(this, Section)
+  object doc extends LongMappedMapper(this, Document)
 
-  def contents() = 
-    TagRef.findAll(By(TagRef.tag, this)).map {_.content.obj.get}
+  def content(sec : Section) : Box[Content] = {
+    val c= TagRef.find(By(TagRef.tag, this), By(TagRef.section, sec))
+    if (c.isEmpty) {
+      if (parent.isEmpty) Empty else parent.obj.get.content(sec) 
+    } else c.get.content.obj
+  }
 }
 
 object Tag extends Tag with LongKeyedMetaMapper[Tag] {
@@ -21,7 +25,8 @@ object Tag extends Tag with LongKeyedMetaMapper[Tag] {
 class TagRef extends LongKeyedMapper[TagRef] with IdPK {
   def getSingleton = TagRef
 
-  object tag extends LongMappedMapper(this, Tag)
+  object tag extends LongMappedMapper(this, Tag) with DBIndexed
+  object section extends LongMappedMapper(this, Section) with DBIndexed
   object content extends LongMappedMapper(this, Content)
 }
 

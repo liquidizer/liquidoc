@@ -20,16 +20,20 @@ object SampleData {
       val link= Link.create.pre(current.get).post(node)
       link.save
     }
-    val para= Content.create.style(style).text(content).section(node)
+    val para= Content.create.style(style).text(content)
     para.save
+    val tref= TagRef.create.content(para).section(node)
+    tref.save
     if (head.isEmpty) head= Some(node)
     current= Some(node)
   }
 
   def makeTag() = {
-    val tag= Tag.create.name("v1.0").head(head.get)
+    val doc= Document.create.name("Wahlprogramm").head(head.get)
+    doc.save
+    val tag= Tag.create.name("v1.0").doc(doc)
     tag.save
-    Content.findAll.foreach { TagRef.create.tag(tag).content(_).save }
+    TagRef.findAll.foreach { _.tag(tag).save }
   }
 
   def fillDocument() {

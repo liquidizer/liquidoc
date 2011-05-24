@@ -1,17 +1,19 @@
 <lift:surround with="default">
+  <lift:bind-at name="title"><lift:LiquiDoc.title/></lift:bind-at>
   <lift:bind-at name="content">
     <lift:form  method="POST">
-    <lift:Document>
+    <lift:LiquiDoc>
       <table>
 	<doc:content-tr>
-	  <td width="5%"><sec:edit/></td>
 	  <td width="75%"><sec:content/></td>
+	  <td width="5%"><sec:edit/></td>
 	  <td width="20%"><sec:branches/></td>
 	</doc:content-tr>
       </table>
       <hr/>
+      <div id="error"/>
       <doc:tagName/><doc:makeTag/>
-    </lift:Document>
+    </lift:LiquiDoc>
     </lift:form>
   </lift:bind-at>
 </lift:surround>
