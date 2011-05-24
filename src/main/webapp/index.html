@@ -3,16 +3,22 @@
   <lift:bind-at name="content">
     <lift:form  method="POST">
     <lift:LiquiDoc>
+      <div class="header">
+	<doc:title/>
+	<br/>
+	History: <span class="history"><doc:history/></span>
+      </div>
+      <hr/>
       <table>
 	<doc:content-tr>
 	  <td width="75%"><sec:content/></td>
 	  <td width="5%"><sec:edit/></td>
-	  <td width="20%"><sec:branches/></td>
+	  <td width="20%" class="branches"><sec:branches/></td>
 	</doc:content-tr>
       </table>
       <hr/>
       <div id="error"/>
-      <doc:tagName/><doc:makeTag/>
+      <doc:makeTagName/><doc:makeTagButton/>
     </lift:LiquiDoc>
     </lift:form>
   </lift:bind-at>

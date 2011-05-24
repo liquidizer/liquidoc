@@ -11,6 +11,13 @@ td {
     padding: 1px;
 }
 
+hr {
+    color:#660099;
+    background-color:#660099;
+    height:3px;
+    border: 0px;
+}
+
 li {
     list-style: none;
 }
@@ -23,6 +30,15 @@ li img {
     font-weight: bold;
 }
 
+.history a {
+    margin: 0 0 0 5px;
+    text-decoration: none;
+}
+
+.history .active {
+    font-weight: bold;
+}
+
 .inserted {
     background-color: yellow;
 }
@@ -30,6 +46,10 @@ li img {
 .deleted {
     color: gray;
     text-decoration: line-through;
+}
+
+.header {
+    font-size: 11pt;
 }
 
 .section-h1 {

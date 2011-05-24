@@ -125,6 +125,7 @@ class SectionRenderer(val ref : Content, var show : Content) {
   def makeTag(tag : Tag) {
     if (show.dirty_?)
       save()
+    // TODO section
     TagRef.create.tag(tag).content(show).save
   }
 }
