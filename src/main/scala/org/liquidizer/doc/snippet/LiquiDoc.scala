@@ -24,7 +24,7 @@ class LiquiDoc {
   var helpers = List[SectionRenderer]()
 
   def title(node : NodeSeq) : NodeSeq = 
-    Text(doc.name.is + ":" + showTag.name.is)
+    Text(doc.name.is + " : " + showTag.name.is)
 
   def render(node : NodeSeq) : NodeSeq = node.flatMap { render(_) }
 

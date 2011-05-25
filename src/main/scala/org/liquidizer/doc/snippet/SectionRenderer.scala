@@ -94,36 +94,37 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
 
   def branchArea() : NodeSeq = <div id={"branches"+id}>{ branches() }</div>
 
+  def toHtml(tree : TagTree) : NodeSeq = <li> {
+    val src= if (tree.cur==tree.show) "active" else "inactive"
+    val img = <img src={"/images/"+src+".png"}/>
+    val icon = SHtml.a(() => { show= tree.cur; redraw()}, img) 
+    
+    val subtree= 
+      if (tree.isShown) {
+	( tree.refs -- tree.children.flatMap( _.refs ) )
+	.flatMap {
+	  tag => tagLink(tag)
+	} ++
+	<ul>{ tree.children.flatMap{ toHtml(_) }}</ul>
+      } else {
+	tree.refs.flatMap {
+	  tag => tagLink(tag)
+	}
+      }
+    icon ++ subtree
+  } </li>
+
   def branches() : NodeSeq = {
-
-    var parents= List(show)
-    while(parents.head.parent.defined_?) 
-      parents ::= parents.head.parent.obj.get
-
-    def branches(cur : Content) : NodeSeq = {
-      <li> {
-        val src= if (cur==show) "active" else "inactive"
-        val refs= TagRef.findAll(By(TagRef.content, cur))
-        SHtml.a(() => { show= cur; redraw()}, 
-    	      <img src={"/images/"+src+".png"}/>) ++ {
-    	if (refs.isEmpty) NodeSeq.Empty
-    	else tagLink(refs.first.tag.obj.get)
-        } ++ {
-          val alts= Content.findAll(By(Content.parent, cur))
-          if (!parents.contains(cur) || alts.isEmpty) NodeSeq.Empty else
-            <ul>{ alts.flatMap{ branches(_) } }</ul>
-        }
-      } </li>
-    }
-    <ul>{ branches(ref) }</ul>
-
+    val tree= new TagTree(ref, show)
+    <ul>{ toHtml(tree) }</ul>
   }
 
-  def tagLink(tag : Tag) = {
+  def tagLink(tag : Tag) : NodeSeq = {
     <a href={
       Helpers.appendParams("/", Seq(
 	"root" -> rootTag.id.is.toString,
-	"show" -> tag.id.is.toString))}>{
+	"show" -> tag.id.is.toString))}
+      class={if (tag==showTag) "active" else "inactive"}>{
       tag.name.is
     }</a>
   }
@@ -131,7 +132,8 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def makeTag(tag : Tag) {
     if (show.dirty_?)
       save()
-    TagRef.create.tag(tag).content(show).section(sec).save
+    if (show != ref)
+      TagRef.create.tag(tag).content(show).section(sec).save
   }
 
   def isDirty() = show != showTag.content(sec).get

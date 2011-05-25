@@ -1,9 +1,18 @@
 body {
-    margin: 5px;
+    font-size: 11pt;
 }
 table {
     width:100%;
     cell-padding: 1px;
+    margin: 0 0 0 10px;
+}
+.header {
+    padding: 10px;
+    background-color: lightgray;
+}
+
+h2 {
+    margin: 0 0 2px 0;
 }
 td {
     vertical-align: top;
@@ -12,17 +21,14 @@ td {
 }
 
 hr {
-    color:#660099;
-    background-color:#660099;
-    height:3px;
+    color: black;
+    background-color: black;
+    height:1px;
     border: 0px;
 }
 
 li {
     list-style: none;
-}
-li img {
-    margin: 0 10px 0 0;
 }
 
 .error {
@@ -30,12 +36,12 @@ li img {
     font-weight: bold;
 }
 
-.history a {
+a {
     margin: 0 0 0 5px;
     text-decoration: none;
 }
 
-.history .active {
+.active {
     font-weight: bold;
 }
 
@@ -46,10 +52,6 @@ li img {
 .deleted {
     color: gray;
     text-decoration: line-through;
-}
-
-.header {
-    font-size: 11pt;
 }
 
 .section-h1 {
