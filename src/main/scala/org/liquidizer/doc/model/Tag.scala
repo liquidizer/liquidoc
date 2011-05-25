@@ -7,6 +7,7 @@ import net.liftweb.common._
 class Tag extends LongKeyedMapper[Tag] with IdPK {
   def getSingleton = Tag
   object name extends MappedString(this, 50)
+  object time extends MappedLong(this)
 
   object parent extends LongMappedMapper(this, Tag)
   object doc extends LongMappedMapper(this, Document)
@@ -20,6 +21,10 @@ class Tag extends LongKeyedMapper[Tag] with IdPK {
 }
 
 object Tag extends Tag with LongKeyedMetaMapper[Tag] {
+  def get(id : String) : Option[Tag] = 
+    if (id.startsWith("#")) 
+      Tag.find(By(Tag.name, id.substring(1)), OrderBy(Tag.id, Descending))
+    else Tag.find(By(Tag.id, id.toLong))
 }
 
 class TagRef extends LongKeyedMapper[TagRef] with IdPK {

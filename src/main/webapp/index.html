@@ -6,7 +6,9 @@
       <div class="header">
 	<doc:title/>
 	<br/>
-	History: <span class="history"><doc:history/></span>
+	<test:hasHistory>
+	  History: <span class="history"><doc:history/></span>
+	</test:hasHistory>
       </div>
       <hr/>
       <table>
@@ -18,7 +20,8 @@
       </table>
       <hr/>
       <div id="error"/>
-      <doc:makeTagName/><doc:makeTagButton/>
+      <doc:makeTagName/><doc:makeTag/>
+      <test:isHead><doc:updateTag/></test:isHead>
     </lift:LiquiDoc>
     </lift:form>
   </lift:bind-at>

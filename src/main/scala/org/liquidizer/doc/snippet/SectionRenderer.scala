@@ -11,7 +11,10 @@ import net.liftweb.mapper._
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
-class SectionRenderer(val ref : Content, var show : Content) {
+class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
+  
+  val ref= rootTag.content(sec).get
+  var show= showTag.content(sec).get
 
   val styles=List(
     ("h1", "Heading 1"),
@@ -117,7 +120,10 @@ class SectionRenderer(val ref : Content, var show : Content) {
   }
 
   def tagLink(tag : Tag) = {
-    <a href={Helpers.appendParams("/", Seq("root" -> tag.id.is.toString))}>{
+    <a href={
+      Helpers.appendParams("/", Seq(
+	"root" -> rootTag.id.is.toString,
+	"show" -> tag.id.is.toString))}>{
       tag.name.is
     }</a>
   }
@@ -125,7 +131,8 @@ class SectionRenderer(val ref : Content, var show : Content) {
   def makeTag(tag : Tag) {
     if (show.dirty_?)
       save()
-    // TODO section
-    TagRef.create.tag(tag).content(show).save
+    TagRef.create.tag(tag).content(show).section(sec).save
   }
+
+  def isDirty() = show != showTag.content(sec).get
 }

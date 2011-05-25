@@ -1,6 +1,7 @@
 package bootstrap.liftweb
 
 import org.liquidizer.doc.model._
+import org.liquidizer.doc.lib._
 
 object SampleData {
   var current : Option[Section]= None
@@ -31,7 +32,7 @@ object SampleData {
   def makeTag() = {
     val doc= Document.create.name("Wahlprogramm").head(head.get)
     doc.save
-    val tag= Tag.create.name("v1.0").doc(doc)
+    val tag= Tag.create.name("v1.0").doc(doc).time(TimeUtil.now)
     tag.save
     TagRef.findAll.foreach { _.tag(tag).save }
   }
