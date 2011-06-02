@@ -4,6 +4,9 @@
     <lift:form  method="POST">
     <lift:LiquiDoc>
       <div class="header">
+	<div style="float:right">
+	  <lift:PseudoLogin/>
+	</div>
 	<h2><doc:title/></h2>
 	<test:hasHistory>
 	  History: <span class="history"><doc:history/></span>
@@ -11,11 +14,13 @@
       </div>
       <hr/>
       <table>
-	<doc:content-tr>
-	  <td width="75%"><sec:content/></td>
-	  <td width="5%"><sec:edit/></td>
-	  <td width="20%" class="branches"><sec:branches/></td>
-	</doc:content-tr>
+	<doc:content>
+	  <tr>
+	    <td width="65%"><sec:content/></td>
+	    <td width="5%"><sec:edit/></td>
+	    <td width="30%" class="branches"><sec:branches/></td>
+	  </tr>
+	</doc:content>
       </table>
       <div class="header">
 	<span id="error"/>

@@ -28,4 +28,6 @@ class TagTree(val cur : Content, val show : Content) {
   def conflicts(tag : Tag, sec : Section) = {
     refs.filter { _.content(sec) != show }
   }
+
+  def isCurrent() = { cur==show }
 }

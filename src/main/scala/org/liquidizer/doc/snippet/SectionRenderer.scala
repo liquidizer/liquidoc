@@ -26,7 +26,7 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   val id= show.id.is
 
   def render(node : NodeSeq) : NodeSeq = {
-    <tr id={"section-" + id}> { bind(node) }</tr>
+    <div id={"section-" + id}> { bind(node) }</div>
   }
 
   def bind(node : NodeSeq) : NodeSeq = node.flatMap { bind(_) }
@@ -78,45 +78,67 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     redraw()
   }
 
-  def redraw() : JsCmd = {
+  def redraw() : JsCmd = redraw(show)
+
+  def redraw(newShow : Content) : JsCmd = {
+    SetHtml("content"+id, {
+      if (content==show) { content() }
+      else {
+	val oldShow= show
+	show= newShow
+	content(ref, oldShow, newShow)
+      }}) &
     SetHtml("edit"+id, editButton()) &
-    SetHtml("content"+id, content()) &
     SetHtml("branches"+id, branches())
   }
 
-  def contentArea() = <div id={"content"+id} >{ content }</div>
-
   def content() = {
     <div class={"section-"+show.style.is}> {
-      DiffRenderer.renderDiff(ref.text.is, show.text.is)
+	DiffRenderer.renderDiff(ref.text.is, show.text.is)
+    } </div>
+  }
+
+  def content(ref : Content, oldShow : Content, newShow :Content) = {
+    <div class={"section-"+newShow.style.is}> {
+      DiffRenderer.renderDiff(ref.text.is, oldShow.text.is, newShow.text.is)
     }</div>
   }
 
+  def contentArea() = <div id={"content"+id} >{ content() }</div>
+
   def branchArea() : NodeSeq = <div id={"branches"+id}>{ branches() }</div>
 
-  def toHtml(tree : TagTree) : NodeSeq = <li> {
-    val src= if (tree.cur==tree.show) "active" else "inactive"
+  def toHtml(trees : List[TagTree]) : NodeSeq = <ul> {
+    trees.flatMap { tree => <li> { toHtml(tree) } </li> } 
+  } </ul>
+
+  def toHtml(tree : TagTree) : NodeSeq = {
+    val src= if (tree.isCurrent) "active" else "inactive"
     val img = <img src={"/images/"+src+".png"}/>
-    val icon = SHtml.a(() => { show= tree.cur; redraw()}, img) 
+    val icon = SHtml.a(() => { redraw(tree.cur)}, img) 
     
     val subtree= 
       if (tree.isShown) {
-	( tree.refs -- tree.children.flatMap( _.refs ) )
-	.flatMap {
-	  tag => tagLink(tag)
-	} ++
-	<ul>{ tree.children.flatMap{ toHtml(_) }}</ul>
+	val tagList =( tree.refs -- tree.children.flatMap( _.refs ) )
+	tagList.flatMap { tag => tagLink(tag) } ++ {
+	  if (!tree.isCurrent && tagList.isEmpty && tree.children.size<=1)
+	    <div class="compact"> {
+	      toHtml(tree.children)
+	    } </div>
+	  else
+	    toHtml(tree.children)
+	}
       } else {
 	tree.refs.flatMap {
 	  tag => tagLink(tag)
 	}
       }
     icon ++ subtree
-  } </li>
+  }
 
   def branches() : NodeSeq = {
     val tree= new TagTree(ref, show)
-    <ul>{ toHtml(tree) }</ul>
+    toHtml(List(tree))
   }
 
   def tagLink(tag : Tag) : NodeSeq = {

@@ -16,19 +16,24 @@ class DiffPath[T](val oldList : Seq[T],
   def isComplete() = oldList.isEmpty && newList.isEmpty
 
   def successors() : Seq[DiffPath[T]] = {
-      if (oldList.isEmpty) {
-        Seq(new DiffPath(Nil, newList.tail, Inserted(newList.head) :: history, weight+1.0))
-      }
-      else if (newList.isEmpty) {
-        Seq(new DiffPath(oldList.tail, Nil, Deleted(oldList.head) :: history, weight+0.9))
-      }
-      else if (oldList.head == newList.head) {
-        Seq(new DiffPath(oldList.tail, newList.tail, Copied(oldList.head) :: history, weight))
-      } else {
-        Seq(
-          new DiffPath(oldList.tail, newList, Deleted(oldList.head) :: history, weight+0.9),
-          new DiffPath(oldList, newList.tail, Inserted(newList.head) :: history, weight+1))
-      }
+    val off = history match {
+      case List(Deleted(_), _*) => 0.01
+      case List(Inserted(_), _*) => -0.01
+      case _ => 0.0
+    }
+    if (oldList.isEmpty) {
+      Seq(new DiffPath(Nil, newList.tail, Inserted(newList.head) :: history, weight+1.0+off))
+    }
+    else if (newList.isEmpty) {
+      Seq(new DiffPath(oldList.tail, Nil, Deleted(oldList.head) :: history, weight+0.9-off))
+    }
+    else if (oldList.head == newList.head) {
+      Seq(new DiffPath(oldList.tail, newList.tail, Copied(oldList.head) :: history, weight))
+    } else {
+      Seq(
+        new DiffPath(oldList.tail, newList, Deleted(oldList.head) :: history, weight+0.9-off),
+        new DiffPath(oldList, newList.tail, Inserted(newList.head) :: history, weight+1.0+off))
+    }
   }
 
   def compare(other : DiffPath[T])= -weight.compare(other.weight)
@@ -59,6 +64,18 @@ object DiffUtil {
   def diffWeight[T](oldList : Seq[T], newList : Seq[T]) : Double = {
 	  diffPath(oldList, newList).weight;
   }
+
+  def invert[T](list : List[DiffObject[T]]) : List[DiffObject[T]] = {
+    if (list.isEmpty) Nil
+    else {
+      val newHead = list.head match {
+	case Inserted(value) => Deleted(value)
+	case Deleted(value) => Inserted(value)
+	case x => x
+      } 
+      newHead :: invert(list.tail)
+    }
+  }
 }
 
 object DiffRenderer {
@@ -81,5 +98,27 @@ object DiffRenderer {
     val s1= str1.split("\\s")
     val s2= str2.split("\\s")
     renderDiff(DiffUtil.diff(s1,s2))
+  }
+
+  def renderDiff2(content : List[DiffObject[DiffObject[String]]]) : NodeSeq = {
+    if (content.isEmpty) NodeSeq.Empty else {
+      val head= content.takeWhile(_.getClass==content.head.getClass)
+      val tail= content.drop(head.size)
+      val body= head.map( _.value )
+      val res : NodeSeq =content.head match {
+	case Copied(_) => renderDiff(body)
+	case Inserted(_) => <span class="quickdiff">{renderDiff(body)}</span>
+	case _ => NodeSeq.Empty
+      } 
+      res ++ renderDiff2(tail)
+    }
+  }
+
+  def renderDiff(str1 : String, str2a : String, str2b : String) : NodeSeq = {
+    val s1= str1.split("\\s")
+    val s2a= str2a.split("\\s")
+    val s2b= str2b.split("\\s")
+    val diff= DiffUtil.diff(DiffUtil.diff(s1,s2a), DiffUtil.diff(s1,s2b))
+    renderDiff2(diff)
   }
 }

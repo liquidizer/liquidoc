@@ -45,13 +45,29 @@ a {
     font-weight: bold;
 }
 
+.compact {
+    border: 1px solid rgba(255,255,255,0);
+    position: relative;
+    top: -16px;
+    left: -16px;
+    margin: 0px -16px -16px 0px;
+}
+
 .inserted {
-    background-color: yellow;
+    background-color: gold;
 }
 
 .deleted {
     color: gray;
     text-decoration: line-through;
+}
+
+.quickdiff .inserted {
+    background-color: orange;
+}
+
+.quickdiff .deleted {
+    color: orange;
 }
 
 .section-h1 {

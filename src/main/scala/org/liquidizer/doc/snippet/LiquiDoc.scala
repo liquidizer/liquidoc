@@ -43,7 +43,7 @@ class LiquiDoc {
       case "title" => title(node)
       case "tagName" => Text(showTag.name.is)
       case "history" => history()
-      case "content-tr" => render(doc.head.obj.get, children)
+      case "content" => render(doc.head.obj.get, children)
       case "makeTagName" => SHtml.text(name, name= _)
       case "makeTag" => SHtml.ajaxSubmit("MakeTag", ()=>{ makeTag(name) })
       case "updateTag" => SHtml.ajaxSubmit("UpdateTag", ()=>{ updateTag })
