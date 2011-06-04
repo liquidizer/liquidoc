@@ -33,6 +33,7 @@ class Boot {
     LiftRules.addToPackages("org.liquidizer.doc")
     Schemifier.schemify(true, Schemifier.infoF _, 
 			Document, Section, Link, Tag, TagRef, Content)
+
     SampleData.update()
 
     LiftRules.early.append(makeUtf8)

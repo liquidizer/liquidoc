@@ -13,6 +13,7 @@ import org.liquidizer.doc.lib._
 
 class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   
+  var random= new scala.util.Random
   val ref= rootTag.content(sec).get
   var show= showTag.content(sec).get
 
@@ -34,8 +35,6 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def bind(node : Node) : NodeSeq = node match {
     case Elem("sec", tag, attrib, scope, children @ _*) =>
       tag match {
-        case "edit" => buttonArea()
-	case "insert" => insertButton()
         case "content" => contentArea()
 	case "branches" => branchArea()
       }
@@ -46,23 +45,23 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     case _ => node
   }
 
-  def buttonArea() =  <div id={"edit"+id}>{ editButton() }</div>
-  def editButton() = SHtml.ajaxButton("edit", () => toEditMode()) 
-  def saveButton() = SHtml.ajaxSubmit("save", () => save())
-  def insertButton() = SHtml.ajaxButton("Insert", () => Noop)
+  def editButton()= SHtml.a(()=> toEditMode(),
+			    <span class="more">[edit]</span>) 
+  def saveButton()= SHtml.ajaxSubmit("save", () => save())
 
   def toEditMode() = {
     show= Content.create.parent(show).text(show.text.is).style(show.style.is)
-    SetHtml("content"+id, editArea()) &
-    SetHtml("edit"+id, saveButton())
+    SetHtml("content"+id, editArea())
   }
 
   def editArea() : NodeSeq = {
     <div> { 
-      SHtml.select(styles, Full(show.style.is), text => show.style(text) ) 
+      SHtml.select(styles, Full(show.style.is), text => show.style(text) ) ++
+      Text(" ") ++ saveButton()
     } </div> ++
     <div> { 
-      SHtml.textarea(show.text.is, show.text(_)) 
+      SHtml.textarea(show.text.is, 
+		     text => show.text(text.split("\\s+").mkString(" ")))
     } </div>
   }
 
@@ -72,35 +71,35 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     }
     if (dirty) {
       show.save
+      redraw(show.parent.obj.get, show)
     } else {
       show= show.parent.obj.get
+      redraw
     }
-    redraw()
   }
 
-  def redraw() : JsCmd = redraw(show)
+  def redraw() : JsCmd = redraw(show, show)
 
-  def redraw(newShow : Content) : JsCmd = {
+  def redraw(oldShow : Content, newShow : Content) : JsCmd = {
+    show = newShow
     SetHtml("content"+id, {
-      if (content==show) { content() }
-      else {
-	val oldShow= show
-	show= newShow
-	content(ref, oldShow, newShow)
-      }}) &
+      if (oldShow==newShow) { content() }
+      else { content(ref, oldShow, newShow) }}) &
     SetHtml("edit"+id, editButton()) &
     SetHtml("branches"+id, branches())
   }
 
   def content() = {
     <div class={"section-"+show.style.is}> {
-	DiffRenderer.renderDiff(ref.text.is, show.text.is)
+	DiffRenderer.renderDiff(ref.text.is, show.text.is) ++
+	editButton
     } </div>
   }
 
   def content(ref : Content, oldShow : Content, newShow :Content) = {
     <div class={"section-"+newShow.style.is}> {
-      DiffRenderer.renderDiff(ref.text.is, oldShow.text.is, newShow.text.is)
+      DiffRenderer.renderDiff(ref.text.is, oldShow.text.is, newShow.text.is) ++
+      editButton
     }</div>
   }
 
@@ -109,19 +108,25 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def branchArea() : NodeSeq = <div id={"branches"+id}>{ branches() }</div>
 
   def toHtml(trees : List[TagTree]) : NodeSeq = <ul> {
-    trees.flatMap { tree => <li> { toHtml(tree) } </li> } 
+    val h= trees
+    .sort { _.refs.size > _.refs.size }
+    .flatMap { tree => <li> { toHtml(tree) } </li> }
+    val n= if (trees.exists(_.containsCurrent))
+      trees.takeWhile(!_.containsCurrent).size + 2 else 0
+    new Uncover(h.elements, 5).next("branchvar"+random.nextInt, 5 max n) 
+				    
   } </ul>
 
   def toHtml(tree : TagTree) : NodeSeq = {
     val src= if (tree.isCurrent) "active" else "inactive"
     val img = <img src={"/images/"+src+".png"}/>
-    val icon = SHtml.a(() => { redraw(tree.cur)}, img) 
+    val icon = SHtml.a(() => { redraw(show, tree.cur)}, img) 
     
     val subtree= 
       if (tree.isShown) {
-	val tagList =( tree.refs -- tree.children.flatMap( _.refs ) )
-	tagList.flatMap { tag => tagLink(tag) } ++ {
-	  if (!tree.isCurrent && tagList.isEmpty && tree.children.size<=1)
+	val tags = tree.refs -- tree.children.flatMap( _.refs )
+	tagList(tags) ++ {
+	  if (!tree.isCurrent && tags.isEmpty && tree.children.size<=1)
 	    <div class="compact"> {
 	      toHtml(tree.children)
 	    } </div>
@@ -129,9 +134,7 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
 	    toHtml(tree.children)
 	}
       } else {
-	tree.refs.flatMap {
-	  tag => tagLink(tag)
-	}
+	tagList(tree.refs)
       }
     icon ++ subtree
   }
@@ -141,7 +144,18 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     toHtml(List(tree))
   }
 
+  /** Show a list of named tags */
+  def tagList(tags : List[Tag]) : NodeSeq = {
+    var sorted= tags
+    if (tags.contains(showTag)) 
+      sorted=  showTag :: (sorted -- List(showTag))
+    new Uncover(sorted.elements.map { tagLink(_) }, 3)
+    .next("branchvar"+random.nextInt, 3) 
+  }
+
+  /** Format a tag as a permanent link to its content */
   def tagLink(tag : Tag) : NodeSeq = {
+    Text(" ")++
     <a href={
       Helpers.appendParams("/", Seq(
 	"root" -> rootTag.id.is.toString,
@@ -154,8 +168,7 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def makeTag(tag : Tag) {
     if (show.dirty_?)
       save()
-    if (show != ref)
-      TagRef.create.tag(tag).content(show).section(sec).save
+    TagRef.create.tag(tag).content(show).section(sec).save
   }
 
   def isDirty() = show != showTag.content(sec).get

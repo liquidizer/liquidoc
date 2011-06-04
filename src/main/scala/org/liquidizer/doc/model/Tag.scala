@@ -8,6 +8,7 @@ class Tag extends LongKeyedMapper[Tag] with IdPK {
   def getSingleton = Tag
   object name extends MappedString(this, 50)
   object time extends MappedLong(this)
+  object isold extends MappedBoolean(this)
 
   object parent extends LongMappedMapper(this, Tag)
   object doc extends LongMappedMapper(this, Document)

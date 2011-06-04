@@ -20,7 +20,6 @@ class LiquiDoc {
   val showTag= showId.map( Tag.get(_).get).getOrElse(rootTag)
   val doc= showTag.doc.obj.get
 
-  var name= ""
   var helpers = List[SectionRenderer]()
 
   def title(node : NodeSeq) : NodeSeq = 
@@ -31,10 +30,6 @@ class LiquiDoc {
   def render(node : Node) : NodeSeq = node match {
     case Elem("test", tag, attribs, scope, children @ _*) =>
       if (tag match {
-	case "isHead" => 
-	  Tag.find(By(Tag.name, showTag.name), 
-		   By(Tag.doc, doc), 
-		   OrderBy(Tag.id, Descending)).exists( _==showTag)
 	case "hasHistory" => rootTag != showTag
       }) render(node.child) else NodeSeq.Empty
 
@@ -44,8 +39,6 @@ class LiquiDoc {
       case "tagName" => Text(showTag.name.is)
       case "history" => history()
       case "content" => render(doc.head.obj.get, children)
-      case "makeTagName" => SHtml.text(name, name= _)
-      case "makeTag" => SHtml.ajaxSubmit("MakeTag", ()=>{ makeTag(name) })
       case "updateTag" => SHtml.ajaxSubmit("UpdateTag", ()=>{ updateTag })
     }
 
@@ -67,30 +60,18 @@ class LiquiDoc {
     links.flatMap { link => render(link.post.obj.get, node) }
   }
 
-  def makeTag(name : String) : JsCmd = {
-    if (name.isEmpty) error ("Tag name is empty")
-    else {
-      val other= Tag.find(By(Tag.doc, doc), By(Tag.name, name))
-      if (!other.isEmpty) error("Tag named '"+name+"' already exists")
-      else {
-	val newTag = Tag.create.name(name).doc(doc).parent(rootTag)
-	makeTag(newTag)
-      }
-    }
-  }
-  
-  def makeTag(newTag : Tag) : JsCmd = {
-    newTag.time(TimeUtil.now)
-    newTag.save
-    helpers.foreach { _.makeTag(newTag) }
-    RedirectTo(linkUri(newTag))
-  }
-
   def updateTag() : JsCmd = {
-    val dirty= helpers.foldLeft(false) { _ || _.isDirty }
-    if (dirty) {
-      val newTag = Tag.create.name(showTag.name).doc(doc).parent(showTag)
-      makeTag(newTag)
+    if (PseudoLogin.loggedIn) {
+      val name= PseudoLogin.userName
+
+      Tag.findAll(By(Tag.name,name), By(Tag.isold, false))
+      .foreach { _.isold(true) .save }
+
+      val newTag = Tag.create.name(name).doc(doc).parent(showTag)
+      newTag.time(TimeUtil.now)
+      newTag.save
+      helpers.foreach { _.makeTag(newTag) }
+      RedirectTo(linkUri(newTag))
     } else {
       Noop
     }
@@ -105,25 +86,19 @@ class LiquiDoc {
 
   def history() : NodeSeq = {
     val name= showTag.name.is
-    def older(tag : Tag) : List[Tag] =
-      tag :: (if (tag.parent.obj.isEmpty) Nil else older(tag.parent.obj.get))
-    def newer(tag : Tag) : List[Tag] = {
-      val next= Tag.find(By(Tag.name, name), By(Tag.parent, tag))
-      if (next.isEmpty) Nil else next.get :: newer(next.get)
-    }
+    val fixHead= showId.exists (_.startsWith("#"))
+    val tags= Tag.findAll(By(Tag.name, name),OrderBy(Tag.time, Ascending))
     var x=0
-    (older(showTag).reverse ++ newer(showTag)).flatMap { tag =>
+    <a href={linkUri(rootTag, false)} class="inactive">{ "[ROOT]" }</a> ++
+    Text(" ") ++
+    tags.flatMap { tag =>
       val href= linkUri(tag)
-      if (tag.name.is==name) {
-	val style= if (tag==showTag) "active" else "inactive"
-	x+=1
-	<a href={href} class={style}>{ "["+x+"]" }</a>
-      } else {
-	<a href={href} class="inactive">{ "["+tag.name.is+"]" }</a>
-      }
+      val style= if (tag==showTag) "active" else "inactive"
+      x+=1
+      <a href={href} class={style}>{ "["+x+"]" }</a> ++ Text(" ")
     } ++ 
-      <a href={linkUri(showTag, true)} class={
-	if (showId.exists (_.startsWith("#"))) "active" else"inactive"}>{ 
+      <a href={linkUri(showTag, !fixHead)} class={
+	if (fixHead) "active" else"inactive"}>{ 
 	  "[HEAD]" }</a> ++
     <span> { TimeUtil.formatRelTime(showTag.time.is) } </span>
   }

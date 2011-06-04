@@ -40,8 +40,8 @@ class DiffPath[T](val oldList : Seq[T],
   
   def dominates(other : DiffPath[T]) =
     weight <= other.weight &&
-    newList == other.newList &&
-    oldList == other.oldList
+    newList.size == other.newList.size &&
+    oldList.size == other.oldList.size
 }
 
 object DiffUtil {

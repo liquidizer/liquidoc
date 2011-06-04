@@ -2,12 +2,18 @@ package bootstrap.liftweb
 
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
+import net.liftweb.mapper._
 
 object SampleData {
   var current : Option[Section]= None
   var head : Option[Section]= None
 
+  def isHead(tag : Tag) = 
+    Tag.find(By(Tag.parent, tag), By(Tag.name, tag.name.is)).isEmpty
+
   def update() {
+    Tag.findAll.foreach { tag => if (!isHead(tag)) tag.isold(true).save }
+
     if (Tag.findAll.isEmpty) {
       fillDocument()
       makeTag()

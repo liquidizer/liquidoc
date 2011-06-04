@@ -9,19 +9,20 @@ import net.liftweb.mapper._
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
+/** The TagTree repressents the version tree for a section */
 class TagTree(val cur : Content, val show : Content) {
+
   val children : List[TagTree] = 
     Content.findAll(By(Content.parent, cur)).map {
       new TagTree(_, show) 
     }
 
   val refs : List[Tag] = { 
-    TagRef.findAll(By(TagRef.content, cur)).map { _.tag.obj.get } ++ 
+    TagRef.findAll(By(TagRef.content, cur))
+    .map { _.tag.obj.get }
+    .filter { !_.isold.is } ++ 
     children.flatMap { _.refs }
-  }.removeDuplicates.filter { isHead _ }
-
-  def isHead(tag : Tag) = 
-    Tag.find(By(Tag.parent, tag), By(Tag.name, tag.name.is)).isEmpty
+  }.removeDuplicates
 
   val isShown : Boolean = children.foldLeft(cur==show) { _ || _.isShown }
 
@@ -29,5 +30,8 @@ class TagTree(val cur : Content, val show : Content) {
     refs.filter { _.content(sec) != show }
   }
 
-  def isCurrent() = { cur==show }
+  val isCurrent : Boolean = cur==show
+
+  val containsCurrent : Boolean = 
+    isCurrent || children.exists(_.containsCurrent)
 }

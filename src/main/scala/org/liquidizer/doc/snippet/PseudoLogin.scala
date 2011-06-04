@@ -12,24 +12,43 @@ import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
 class PseudoLogin {
-
-  object user extends SessionVar[Option[String]](None)
+  
+  val uri= S.uri
+  val root= S.param("root").getOrElse("1")
 
   def render(node : NodeSeq) : NodeSeq = 
     <div id="pseudoLogin">{ render() }</div>
 
   def render() : NodeSeq = {
-    if (user.is.isEmpty) {
+    if (PseudoLogin.loggedIn) {
+      val name = PseudoLogin.userName
+      Text("Logged in as ")++ render(name)++ Text(" ") ++
+      SHtml.ajaxSubmit("Logout", () => {
+	PseudoLogin.user.set(None)
+	SetHtml("pseudoLogin", render) })
+    } else {
       SHtml.text("", name => {
-	user.set(if (name.trim.isEmpty) None else Some(name))
+	PseudoLogin.user.set(if (name.trim.isEmpty) None else Some(name))
       }) ++
       SHtml.ajaxSubmit("Login", () => SetHtml("pseudoLogin", render()))
-    } else {
-      Text("Logged in as "+user.is.get+" ") ++
-      SHtml.ajaxSubmit("Logout", () => {
-	user.set(None)
-	SetHtml("pseudoLogin", render) })
     }
   }
 
+  def render(name : String) = {
+    val tag = Tag.find(By(Tag.isold,false), By(Tag.name, name))
+    if (tag.isEmpty)
+      Text(name)
+    else {
+      val tagId= tag.get.id.is.toString
+      <a href={Helpers.appendParams(uri, Seq("root"-> root, 
+				    "show" -> tagId))}>{name}</a>
+    } 
+  }
+}
+
+object PseudoLogin {
+  object user extends SessionVar[Option[String]](None)
+
+  def loggedIn() = !user.is.isEmpty
+  def userName() = user.is.getOrElse("")
 }
