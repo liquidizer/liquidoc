@@ -83,7 +83,7 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def redraw(oldShow : Content, newShow : Content) : JsCmd = {
     show = newShow
     SetHtml("content"+id, {
-      if (oldShow==newShow) { content() }
+      if (true || oldShow==newShow) { content() }
       else { content(ref, oldShow, newShow) }}) &
     SetHtml("edit"+id, editButton()) &
     SetHtml("branches"+id, branches())
@@ -177,7 +177,8 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def makeTag(tag : Tag) {
     if (show.dirty_?)
       save()
-    TagRef.create.tag(tag).content(show).section(sec).save
+    if (tag.content(sec)!=show)
+      TagRef.create.tag(tag).content(show).section(sec).save
   }
 
   def isDirty() = show != showTag.content(sec).get
