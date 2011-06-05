@@ -17,22 +17,26 @@ class DiffPath[T](val oldList : Seq[T],
 
   def successors() : Seq[DiffPath[T]] = {
     val off = history match {
-      case List(Deleted(_), _*) => 0.01
-      case List(Inserted(_), _*) => -0.01
+      case List(Deleted(_), _*) => 0.9
+      case List(Inserted(_), _*) => -0.9
       case _ => 0.0
     }
     if (oldList.isEmpty) {
       Seq(new DiffPath(Nil, newList.tail, Inserted(newList.head) :: history, weight+1.0+off))
     }
-    else if (newList.isEmpty) {
-      Seq(new DiffPath(oldList.tail, Nil, Deleted(oldList.head) :: history, weight+0.9-off))
-    }
-    else if (oldList.head == newList.head) {
-      Seq(new DiffPath(oldList.tail, newList.tail, Copied(oldList.head) :: history, weight))
-    } else {
-      Seq(
-        new DiffPath(oldList.tail, newList, Deleted(oldList.head) :: history, weight+0.9-off),
-        new DiffPath(oldList, newList.tail, Inserted(newList.head) :: history, weight+1.0+off))
+    else {
+      if (newList.isEmpty) {
+      Seq(new DiffPath(oldList.tail, Nil, Deleted(oldList.head) :: history, weight+1.0-off))
+      }
+      else {
+	if (oldList.head == newList.head) {
+	  Seq(new DiffPath(oldList.tail, newList.tail, Copied(oldList.head) :: history, weight))
+	} else {
+	  Seq(
+            new DiffPath(oldList.tail, newList, Deleted(oldList.head) :: history, weight+1.0-off),
+            new DiffPath(oldList, newList.tail, Inserted(newList.head) :: history, weight+1.01+off))
+	}
+      }
     }
   }
 
@@ -42,17 +46,21 @@ class DiffPath[T](val oldList : Seq[T],
     weight <= other.weight &&
     newList.size == other.newList.size &&
     oldList.size == other.oldList.size
+
 }
 
 object DiffUtil {
   def diffPath[T](oldList : Seq[T], newList : Seq[T]) : DiffPath[T] = {
+    var tried= List[DiffPath[T]]()
     var queue= new PriorityQueue[DiffPath[T]]
     queue += new DiffPath(oldList, newList, Nil, 0.0)
     while (!queue.head.isComplete) {
       val path= queue.dequeue
-      queue= queue.filter(!path.dominates(_))
-      for (succ <- path.successors)
-        queue += succ     
+      if (!tried.exists( _.dominates(path))) {
+	tried ::= path
+	for (succ <- path.successors)
+          queue += succ
+      }
     }
     queue.head
   }
@@ -94,9 +102,12 @@ object DiffRenderer {
     }
   }
 
+  def split(str : String) : Array[String]= 
+    if (str.isEmpty) Array() else str.split("\\s+")
+
   def renderDiff(str1 : String, str2 : String) : NodeSeq = {
-    val s1= str1.split("\\s")
-    val s2= str2.split("\\s")
+    val s1= split(str1)
+    val s2= split(str2)
     renderDiff(DiffUtil.diff(s1,s2))
   }
 
@@ -115,9 +126,9 @@ object DiffRenderer {
   }
 
   def renderDiff(str1 : String, str2a : String, str2b : String) : NodeSeq = {
-    val s1= str1.split("\\s")
-    val s2a= str2a.split("\\s")
-    val s2b= str2b.split("\\s")
+    val s1= split(str1)
+    val s2a= split(str2a)
+    val s2b= split(str2b)
     val diff= DiffUtil.diff(DiffUtil.diff(s1,s2a), DiffUtil.diff(s1,s2b))
     renderDiff2(diff)
   }

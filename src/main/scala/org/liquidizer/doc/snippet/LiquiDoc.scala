@@ -87,7 +87,8 @@ class LiquiDoc {
   def history() : NodeSeq = {
     val name= showTag.name.is
     val fixHead= showId.exists (_.startsWith("#"))
-    val tags= Tag.findAll(By(Tag.name, name),OrderBy(Tag.time, Ascending))
+    val tags= Tag.findAll(By(Tag.name, name), By(Tag.doc, doc),
+			  OrderBy(Tag.time, Ascending))
     var x=0
     <a href={linkUri(rootTag, false)} class="inactive">{ "[ROOT]" }</a> ++
     Text(" ") ++

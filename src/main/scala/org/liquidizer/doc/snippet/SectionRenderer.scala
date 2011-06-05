@@ -90,17 +90,26 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   }
 
   def content() = {
-    <div class={"section-"+show.style.is}> {
+    format(show.style.is,
 	DiffRenderer.renderDiff(ref.text.is, show.text.is) ++
-	editButton
-    } </div>
+	editButton)
   }
 
   def content(ref : Content, oldShow : Content, newShow :Content) = {
-    <div class={"section-"+newShow.style.is}> {
-      DiffRenderer.renderDiff(ref.text.is, oldShow.text.is, newShow.text.is) ++
-      editButton
-    }</div>
+    format(newShow.style.is,
+	   DiffRenderer.renderDiff(ref.text.is, 
+				   oldShow.text.is, newShow.text.is) ++
+	   editButton)
+  }
+  
+  def format(style : String, body : NodeSeq) : NodeSeq = style match {
+    case "ol" | "ul" =>
+      <table><tr><td class="section-li">{ 
+	if (style=="ol") "#" else "*" 
+      }</td><td> {
+	body
+      }</td></tr></table>
+    case _ => <div class={"section-"+style}> { body } </div>
   }
 
   def contentArea() = <div id={"content"+id} >{ content() }</div>

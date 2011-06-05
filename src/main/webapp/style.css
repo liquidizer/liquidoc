@@ -79,17 +79,9 @@ a {
     font-size: 14pt;
     font-weight : bold;
 }
-
-.section-ol {
-    margin: 1px 1px 1px 20px;
-}
-
 .section-p {
     font-size: 11pt;
 }
-.section-ol {
-    font-size: 11pt;
-}
-.section-ul {
-    font-size: 11pt;
+.section-li {
+    width: 3em;
 }

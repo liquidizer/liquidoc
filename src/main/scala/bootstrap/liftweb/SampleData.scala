@@ -1,62 +1,142 @@
 package bootstrap.liftweb
 
+import java.io.File
+import scala.io.Source
+import scala.xml._
+
+import net.liftweb.mapper._
+
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
-import net.liftweb.mapper._
 
 object SampleData {
   var current : Option[Section]= None
-  var head : Option[Section]= None
+  var tag : Option[Tag]= None
 
   def isHead(tag : Tag) = 
     Tag.find(By(Tag.parent, tag), By(Tag.name, tag.name.is)).isEmpty
 
   def update() {
-    Tag.findAll.foreach { tag => if (!isHead(tag)) tag.isold(true).save }
-
     if (Tag.findAll.isEmpty) {
-      fillDocument()
-      makeTag()
+      loadManifesto(new File("manifesto.xml"))
+      loadPA074(new File("PA074.xml"))
+      makeUpdateTag()
+    }
+    for (tag <- Tag.findAll) {
+      println(" tag : "+tag.id.is)
     }
   }
 
-  def paragraph(style : String, content : String) = {
+  def makeUpdateTag() {
+    for (doc <- Document.findAll) {
+      var sec:Option[Section] = doc.head.obj
+      val otag= Tag.find(By(Tag.doc, doc))
+      val tag= Tag.create.name("PA074").time(TimeUtil.now).doc(doc)
+      tag.parent(otag)
+      tag.save
+      while (!sec.isEmpty) {
+	val ref= TagRef.find(By(TagRef.section, sec.get)).get
+	val child= Content.find(By(Content.parent, ref.content.obj.get))
+	if (!child.isEmpty) {
+	  TagRef.create
+	  .section(sec.get)
+	  .content(child.get)
+	  .tag(tag).save
+	}
+	val link= Link.find(By(Link.pre, sec.get))
+	sec= link.map { _.post.obj.get }
+      }
+    }
+  }
+  
+
+  def makeContent(style : String, content : String) = {
     val node= Section.create
     node.save
     if (!current.isEmpty) {
       val link= Link.create.pre(current.get).post(node)
       link.save
     }
-    val para= Content.create.style(style).text(content)
+    val para= Content.create.style(style).text(nospace(content))
     para.save
-    val tref= TagRef.create.content(para).section(node)
+    val tref= TagRef.create.content(para).section(node).tag(tag.get)
     tref.save
-    if (head.isEmpty) head= Some(node)
+    if (!tag.get.doc.obj.get.head.defined_?)
+      tag.get.doc.obj.get.head(node).save
+
     current= Some(node)
   }
 
-  def makeTag() = {
-    val doc= Document.create.name("Wahlprogramm").head(head.get)
+  def makeDoc(name : String, version : String) = {
+    val doc= Document.create.name(name)
     doc.save
-    val tag= Tag.create.name("v1.0").doc(doc).time(TimeUtil.now)
-    tag.save
-    TagRef.findAll.foreach { _.tag(tag).save }
+    tag= Some(Tag.create.name(version).doc(doc).time(TimeUtil.now))
+    tag.get.save
+    current= None
   }
 
-  def fillDocument() {
-    paragraph("h1",
-	      "Freie demokratisch kontrollierte technische Infrastruktur")
-    paragraph("p", """In unserer modernen Informations- und Kommunikationsgesellschaft ist es von außerordentlicher Wichtigkeit, dass alle Bürger jederzeit die volle Kontrolle über ihre Informationsverarbeitung und Kommunikation erlangen können, sofern sie dies wünschen. Diese Freiheit aller Bürgerinnen soll verhindern, dass die Macht über Systeme und Daten in den Händen Einzelner konzentriert wird. Sie versucht diese so breit wie möglich auf alle Bürger zu verteilen und so ihre Freiheit und Privatsphäre zu sichern.""")
-   paragraph("h2","Offene Standards")
-   paragraph("p","""Die freie und andauernde Verwendung von Daten jeder Art durch alle Nutzerinnen mit Systemen ihrer Wahl kann nur erfolgen, wenn diese Daten in einem Format vorliegen, das den Kriterien eines Offenen Standards entspricht. Ähnlich ist es bei der Zusammenarbeit verschiedener technischer Systeme. Diese sind nur dann bei gleicher Funktionalität austauschbar, wenn ihre Schnittstelle ein Offener Standard ist. Wir setzen uns deshalb für den konsequenten Einsatz und die Verbreitung von Offenen Standards ein. Denn so wird die Abhängigkeit von einzelnen Herstellern verringert und ein freier Wettbewerb technischer Lösungen möglich.""")
-   paragraph("p","""Dabei verstehen wir einen Offenen Standard als ein Protokoll oder Format, das""")
-   paragraph("ol","vollständig, öffentlich, ohne Einschränkungen für alle Beteiligten gleichermaßen zugänglich ist, bewertet und benutzt werden kann,")
-   paragraph("ol","ohne Komponenten oder Erweiterungen ist, die von Formaten oder Protokollen abhängen, die selbst nicht dieser Definition entsprechen,")
-   paragraph("ol","frei ist von juristischen oder technischen Klauseln, die seine Verwendung von jeglicher Seite oder jeglichem Geschäftsmodell einschränken,")
-   paragraph("ol","unabhängig von einem einzelnen Hersteller geleitet und weiterentwickelt wird, in einem Prozess, der einer gleichberechtigten Teilnahme von Wettbewerbern und Dritten offen steht,")
-   paragraph("ol","verfügbar ist in verschiedenen vollständigen Implementierungen von verschiedenen Herstellern oder als vollständig freie Implementierung.")
+  def nospace(str : String) = str.split("\\s+").mkString(" ")
 
-   paragraph("h2","Freie Software")
-   paragraph("p","""Wir setzen uns für die Förderung von Software ein, die von allen uneingeschränkt benutzt, untersucht, verbreitet und verändert werden kann. Diese sogenannte Freie Software garantiert ihren Nutzerinnen alle wesentlichen Freiheiten, die notwendig sind, um die Kontrolle über ihre technischen Systeme selbst zu übernehmen und diese gegebenenfalls kollektiv und demokratisch weiter zu entwickeln. Dies leistet einen wesentlichen Beitrag zur Stärkung von Autonomie und Privatsphäre aller Nutzer. Insbesondere Bildungseinrichtungen und die gesamte öffentliche Verwaltung sollen schrittweise darauf hinarbeiten ihre gesamte technische Infrastruktur auf Freie Software umzustellen, um so langfristig Kosten für die öffentlichen Haushalte und die Abhängigkeit von einzelnen Herstellern zu reduzieren. """)
+  def loadManifesto(file : File) {
+    val manifesto= XML.loadFile(file)
+    for (node <- manifesto.child) {
+      node match {
+        case Elem(_, "h2", attribs, scope,  ch @ _*) =>
+	  makeDoc(attribs.get("id").get.text.replaceAll("_"," "), "official")
+	  makeContent("h1", ch.text)
+
+        case Elem(_, "h3", attribs, scope,  ch @ _*) =>
+	  makeContent("h2", ch.text)
+
+	case Elem(_, "p", attribs, scope, ch @_*) =>
+	  makeContent("p", ch.text)
+
+	case Elem(_, "ol", attribs, scope, ch @_*) =>
+	  for (li <- node \\ "li")
+	    makeContent("ol", li.child.text)
+
+	case Elem(_, "ul", attribs, scope, ch @_*) =>
+	  for (li <- node \\ "li")
+	    makeContent("ul", li.child.text)
+
+	case Text(_) =>
+	case _ => println("unknown element: "+node)
+      }
+    }
+  }
+
+  def prefix(str : String) = str.substring(0, 10 min str.length)
+
+  val PRE= "^[^: ]+:"
+
+  def loadPA074(file : File) {
+    val doc= XML.loadFile(file)
+    var ref : Option[Content] = None
+
+    for (p <- doc \\ "p") {
+      val text= p.child.text.trim
+      if (text.startsWith("bisher:")) {
+	val ntext= nospace(text.replaceAll(PRE,"").trim)
+        ref= Content.find(By(Content.text, ntext))
+	if (!ref.isEmpty) println("MATCHED")
+	if (ref.isEmpty) {
+	  println("SEARCH : "+prefix(ntext))
+	  val m= Content.findAll.filter(
+	    x => prefix(x.text.is) == prefix(ntext))
+	  println(m.size)
+	  m.foreach { x=> println(x.text.is) }
+	}
+      } else {
+        if (!ref.isEmpty && text.startsWith("neu:")) {
+	  println("new")
+          Content.create
+	  .text(nospace(text.replaceAll(PRE,"")))
+	  .style(ref.get.style.is)
+	  .parent(ref.get)
+	  .save
+	  ref= None
+	}
+      }
+    }
   }
 }
