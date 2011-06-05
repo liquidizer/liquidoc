@@ -1,6 +1,6 @@
 package org.liquidizer.doc.snippet
 
-import scala.xml._
+import scala.xml.{Elem,Node,NodeSeq,Text}
 import net.liftweb.util._
 import net.liftweb.http._
 import net.liftweb.http.js._
@@ -15,10 +15,18 @@ class LiquiDoc {
 
   val uri= S.uri
 
-  val rootTag= Tag.get(S.param("root").getOrElse("1")).get
+  val doc : Document= S.param("doc").map { 
+    doc => Document.find(By(Document.name, doc)).get
+  }.getOrElse { 
+    Tag.find(By(Tag.id, S.param("root").get.toLong)).get.doc.obj.get 
+  }
+
+  val rootTag : Tag = S.param("root")
+  .map { Tag.get(_).get }
+  .getOrElse(Tag.find(By(Tag.doc, doc)).get)
+
   val showId= S.param("show")
   val showTag= showId.map( Tag.get(_).get).getOrElse(rootTag)
-  val doc= showTag.doc.obj.get
 
   var helpers = List[SectionRenderer]()
 
