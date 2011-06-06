@@ -83,7 +83,7 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def redraw(oldShow : Content, newShow : Content) : JsCmd = {
     show = newShow
     SetHtml("content"+id, {
-      if (true || oldShow==newShow) { content() }
+      if (oldShow==newShow) { content() }
       else { content(ref, oldShow, newShow) }}) &
     SetHtml("edit"+id, editButton()) &
     SetHtml("branches"+id, branches())
@@ -117,9 +117,7 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def branchArea() : NodeSeq = <div id={"branches"+id}>{ branches() }</div>
 
   def toHtml(trees : List[TagTree]) : NodeSeq = <ul> {
-    val h= trees
-    .sort { _.refs.size > _.refs.size }
-    .flatMap { tree => <li> { toHtml(tree) } </li> }
+    val h= trees.flatMap { tree => <li> { toHtml(tree) } </li> }
     val n= if (trees.exists(_.containsCurrent))
       trees.takeWhile(!_.containsCurrent).size + 2 else 0
     new Uncover(h.elements, 5).next("branchvar"+random.nextInt, 5 max n) 

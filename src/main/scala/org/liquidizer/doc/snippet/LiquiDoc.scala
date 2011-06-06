@@ -72,7 +72,7 @@ class LiquiDoc {
     if (PseudoLogin.loggedIn) {
       val name= PseudoLogin.userName
 
-      Tag.findAll(By(Tag.name,name), By(Tag.isold, false))
+      Tag.findAll(By(Tag.name,name), By(Tag.isold,false), By(Tag.doc,doc))
       .foreach { _.isold(true) .save }
 
       val newTag = Tag.create.name(name).doc(doc).parent(showTag)

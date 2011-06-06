@@ -61,7 +61,7 @@ a {
 }
 
 .deleted {
-    color: gray;
+    color: gold;
     text-decoration: line-through;
 }
 

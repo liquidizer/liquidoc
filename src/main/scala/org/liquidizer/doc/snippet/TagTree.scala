@@ -15,7 +15,8 @@ class TagTree(val cur : Content, val show : Content) {
   val children : List[TagTree] = 
     Content.findAll(By(Content.parent, cur)).map {
       new TagTree(_, show) 
-    }
+    }.sort { _.refs.size > _.refs.size }
+
 
   val refs : List[Tag] = { 
     TagRef.findAll(By(TagRef.content, cur))

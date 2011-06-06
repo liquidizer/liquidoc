@@ -22,9 +22,6 @@ object SampleData {
       loadPA074(new File("PA074.xml"))
       makeUpdateTag()
     }
-    for (tag <- Tag.findAll) {
-      println(" tag : "+tag.id.is)
-    }
   }
 
   def makeUpdateTag() {

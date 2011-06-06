@@ -15,26 +15,27 @@ class DiffPath[T](val oldList : Seq[T],
 
   def isComplete() = oldList.isEmpty && newList.isEmpty
 
+  def deletePath(weight : Double) =
+    new DiffPath(oldList.tail, newList, Deleted(oldList.head)::history, weight)
+
+  def insertPath(weight : Double) =
+    new DiffPath(oldList, newList.tail, Inserted(newList.head)::history, weight)
+
+  def copyPath() =
+    new DiffPath(oldList.tail, newList.tail, Copied(oldList.head) :: history, weight)
+
   def successors() : Seq[DiffPath[T]] = {
-    val off = history match {
-      case List(Deleted(_), _*) => 0.9
-      case List(Inserted(_), _*) => -0.9
-      case _ => 0.0
-    }
-    if (oldList.isEmpty) {
-      Seq(new DiffPath(Nil, newList.tail, Inserted(newList.head) :: history, weight+1.0+off))
-    }
+    if (oldList.isEmpty) { Seq(insertPath(weight+ 2.0)) }
     else {
-      if (newList.isEmpty) {
-      Seq(new DiffPath(oldList.tail, Nil, Deleted(oldList.head) :: history, weight+1.0-off))
-      }
+      if (newList.isEmpty) { Seq(deletePath(weight + 1.0)) }
       else {
 	if (oldList.head == newList.head) {
-	  Seq(new DiffPath(oldList.tail, newList.tail, Copied(oldList.head) :: history, weight))
+	  Seq(copyPath())
 	} else {
-	  Seq(
-            new DiffPath(oldList.tail, newList, Deleted(oldList.head) :: history, weight+1.0-off),
-            new DiffPath(oldList, newList.tail, Inserted(newList.head) :: history, weight+1.01+off))
+	  if (history.firstOption.exists { _.isInstanceOf[Deleted[T]] })
+	    Seq(deletePath(weight + 1.0))
+	  else
+	    Seq(deletePath(weight + 1.0), insertPath(weight+ 1.0))
 	}
       }
     }
@@ -43,10 +44,8 @@ class DiffPath[T](val oldList : Seq[T],
   def compare(other : DiffPath[T])= -weight.compare(other.weight)
   
   def dominates(other : DiffPath[T]) =
-    weight <= other.weight &&
-    newList.size == other.newList.size &&
-    oldList.size == other.oldList.size
-
+    newList.size <= other.newList.size &&
+    oldList.size <= other.oldList.size
 }
 
 object DiffUtil {
@@ -56,8 +55,9 @@ object DiffUtil {
     queue += new DiffPath(oldList, newList, Nil, 0.0)
     while (!queue.head.isComplete) {
       val path= queue.dequeue
+      val acc= queue.size / 10
       if (!tried.exists( _.dominates(path))) {
-	tried ::= path
+	tried = path :: tried.filter { path.dominates _ }
 	for (succ <- path.successors)
           queue += succ
       }
