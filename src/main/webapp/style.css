@@ -48,6 +48,10 @@ a {
     color: darkkhaki;
 }
 
+.edit {
+    vertical-align: top;
+}
+
 .compact {
     border: 1px solid rgba(255,255,255,0);
     position: relative;

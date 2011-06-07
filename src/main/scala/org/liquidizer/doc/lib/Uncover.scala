@@ -14,22 +14,25 @@ class Uncover(val iter : Iterator[NodeSeq], val n : Int) {
   def addAction(node : NodeSeq, id : String) : NodeSeq = {
     node.last match {
       case <li>{item @ _*}</li> => 
-        node.init ++ <li>{item ++ addLink(id)}</li> ++ addContent(id)
+        node ++ addLink(id, "li") ++ addContent(id)
       case _ if (iter.hasNext) => 
-        node ++ addLink(id) ++ addContent(id)
+        node ++ addLink(id, "span") ++ addContent(id)
       case _ => node
     }
   }
 
-  def addLink(id : String) : NodeSeq= if (!iter.hasNext) NodeSeq.Empty
-  else {
-    <span id={id+"_more"}> {
-      SHtml.a(() =>  {
-                SetHtml(id+"_more", NodeSeq.Empty) &
-                SetHtml(id+"_next", next(id+"_next", n))
+  def addLink(id : String, node : String) : NodeSeq= 
+    if (!iter.hasNext) NodeSeq.Empty
+    else {
+      <span id={id+"_more"}> {
+	Elem(null, node, xml.Null, xml.TopScope,
+	     SHtml.a(() =>  {
+               SetHtml(id+"_more", NodeSeq.Empty) &
+               SetHtml(id+"_next", next(id+"_next", n))
              },
-      	     <span class="more">[more]</span>)} </span>
-  }
+      	     <span class="more">[more]</span>))
+      } </span>
+    }
 
   def addContent(id : String) : NodeSeq= <span id={id+"_next"}/>
   

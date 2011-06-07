@@ -45,9 +45,8 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     case _ => node
   }
 
-  def editButton()= SHtml.a(()=> toEditMode(),
-			    <span class="more">[edit]</span>) 
-  def saveButton()= SHtml.ajaxSubmit("save", () => save())
+  def editButton()= SHtml.a(()=> toEditMode(), 
+			    <img src="/images/edit.png" class="edit"/>)
 
   def toEditMode() = {
     show= Content.create.parent(show).text(show.text.is).style(show.style.is)
@@ -55,15 +54,21 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   }
 
   def editArea() : NodeSeq = {
-    <div> { 
-      SHtml.select(styles, Full(show.style.is), text => show.style(text) ) ++
-      Text(" ") ++ saveButton()
-    } </div> ++
-    <div> { 
+    <table><tr><td colspan="2">{ 
       SHtml.textarea(show.text.is, 
-		     text => show.text(text.split("\\s+").mkString(" ")))
-    } </div>
+		     text => show.text(text.split("\\s+").mkString(" ")),
+		     "rows"->"15", "cols"->"80")
+    }</td></tr><tr><td> {
+      Text("Style: ") ++
+      SHtml.select(styles, Full(show.style.is), text => show.style(text) )
+    }</td><td align="right"> {
+      Text(" ") ++ saveButton() ++
+      Text(" ") ++ cancelButton()
+    } </td></tr></table>
   }
+
+  def saveButton()= SHtml.ajaxSubmit("save", () => save())
+  def cancelButton()= SHtml.ajaxSubmit("cancel", () => cancel())
 
   def save() : JsCmd = {
     val dirty= show.parent.obj.exists {
@@ -72,10 +77,13 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     if (dirty) {
       show.save
       redraw(show.parent.obj.get, show)
-    } else {
-      show= show.parent.obj.get
-      redraw
-    }
+    } else
+      cancel()
+  }
+
+  def cancel() : JsCmd = {
+    show= show.parent.obj.get
+    redraw
   }
 
   def redraw() : JsCmd = redraw(show, show)
@@ -121,7 +129,6 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     val n= if (trees.exists(_.containsCurrent))
       trees.takeWhile(!_.containsCurrent).size + 2 else 0
     new Uncover(h.elements, 5).next("branchvar"+random.nextInt, 5 max n) 
-				    
   } </ul>
 
   def toHtml(tree : TagTree) : NodeSeq = {
