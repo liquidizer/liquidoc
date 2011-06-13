@@ -58,14 +58,18 @@ class LiquiDoc {
 
   def render(sec : Section, node : NodeSeq) : NodeSeq = {
     val helper= new SectionRenderer(rootTag, showTag, sec)
-    helpers ::= helper
-
-    helper.render(node) ++ renderFollowing(sec,node)
+    (if (helper.isEmpty) NodeSeq.Empty else {
+      helpers ::= helper
+      helper.render(node) 
+    }) ++ renderFollowing(sec,node)
   } 
 
   def renderFollowing(sec : Section, node : NodeSeq) : NodeSeq = {
-    val links= Link.findAll(By(Link.pre, sec))
-    links.flatMap { link => render(link.post.obj.get, node) }
+    val a= Link.findAll(By(Link.pre, sec)).map { _.post.obj.get }
+    val b= Link.findAll(ByList(Link.pre, a.map { _.id.is }))
+    .map { _.post.obj.get }
+    
+    (a--b).flatMap { sec => render(sec, node) }
   }
 
   def updateTag() : JsCmd = {

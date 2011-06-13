@@ -12,7 +12,9 @@ import Helpers._
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
-abstract class Block[T](val id : Long) {
+abstract class Block[T] {
+  val id= scala.util.Random.nextLong
+
   var next : Option[Block[T]] = None
   var prev : Option[Block[T]] = None
 
@@ -25,6 +27,7 @@ abstract class Block[T](val id : Long) {
     val sid= "block_"+id
     div(sid + "_deletable",
 	Helpers.bind("block", node,
+		     "id" -> Text(id.toString),
 		     "delete" -> renderDelete(sid),
 		     "insert" -> renderInsert(sid, node))
       ) ++ renderInsertAt(sid)
@@ -64,17 +67,15 @@ abstract class Block[T](val id : Long) {
   }
 }
 
-class MyBlock(id : Long) extends Block[MyBlock](id) {
-  val rnd= scala.util.Random
+class MyBlock extends Block[MyBlock] {
   def newBlock : MyBlock = {
-    val newId= rnd.nextLong
-    new MyBlock(newId)
+    new MyBlock()
   }
 }
 
 class BlockTest {
   def render(node : NodeSeq) : NodeSeq = {
-    val block= new MyBlock(0)
+    val block= new MyBlock
     block.render(node)
   }
 }

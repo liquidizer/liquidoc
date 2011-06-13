@@ -18,9 +18,8 @@ body {
 h2 {
     margin: 0 0 2px 0;
 }
-td {
+td,th {
     vertical-align: top;
-    margin: 1px;
     padding: 1px;
 }
 hr {
@@ -32,7 +31,8 @@ hr {
 
 ul,ol,li {
     list-style: none;
-    margin-left: -10px;
+    padding: 0 0 0 5px;
+    margin: 0px;
 }
 
 a {
@@ -52,6 +52,11 @@ a {
     vertical-align: top;
 }
 
+.branches {
+    padding: 0px;
+    margin: 0px;
+}
+
 .compact {
     border: 1px solid rgba(255,255,255,0);
     position: relative;
@@ -61,11 +66,11 @@ a {
 }
 
 .inserted {
-    background-color: gold;
+    background-color: khaki;
 }
 
 .deleted {
-    color: gold;
+    color: darkkhaki;
     text-decoration: line-through;
 }
 

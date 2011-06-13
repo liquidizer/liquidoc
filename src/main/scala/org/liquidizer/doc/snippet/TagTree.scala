@@ -10,29 +10,28 @@ import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
 /** The TagTree repressents the version tree for a section */
-class TagTree(val cur : Content, val show : Content) {
+class TagTree(val cur : Option[Content], val show : Option[Content]) {
 
   val children : List[TagTree] = 
-    Content.findAll(By(Content.parent, cur)).map {
-      new TagTree(_, show) 
+    if (cur.isEmpty) Nil else
+    Content.findAll(By(Content.parent, cur.get)).map {
+      content => new TagTree(Some(content), show) 
     }.sort { _.refs.size > _.refs.size }
 
 
   val refs : List[Tag] = { 
-    TagRef.findAll(By(TagRef.content, cur))
-    .map { _.tag.obj.get }
-    .filter { !_.isold.is } ++ 
-    children.flatMap { _.refs }
-  }.removeDuplicates
-
-  val isShown : Boolean = children.foldLeft(cur==show) { _ || _.isShown }
-
-  def conflicts(tag : Tag, sec : Section) = {
-    refs.filter { _.content(sec) != show }
+    if (cur.isEmpty) Nil else {
+      TagRef.findAll(By(TagRef.content, cur.get))
+      .map { _.tag.obj.get }
+      .filter { !_.isold.is } ++ 
+      children.flatMap { _.refs }
+    }.removeDuplicates
   }
+
+  val isShown : Boolean= (cur == show) || children.exists { _.isShown }
 
   val isCurrent : Boolean = cur==show
 
   val containsCurrent : Boolean = 
-    isCurrent || children.exists(_.containsCurrent)
+    isCurrent || children.exists( _.containsCurrent )
 }
