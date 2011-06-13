@@ -13,11 +13,11 @@ class Uncover(val iter : Iterator[NodeSeq], val n : Int) {
 
   def addAction(node : NodeSeq, id : String) : NodeSeq = {
     node.lastOption match {
+      case _ if (!iter.hasNext) => node
       case Some(<li>{item @ _*}</li>) => 
         node ++ addLink(id, "li") ++ addContent(id)
-      case _ if (iter.hasNext) => 
+      case _ => 
         node ++ addLink(id, "span") ++ addContent(id)
-      case _ => node
     }
   }
 

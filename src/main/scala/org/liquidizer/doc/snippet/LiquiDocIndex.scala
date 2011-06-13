@@ -7,11 +7,34 @@ import net.liftweb.http.js._
 import net.liftweb.http.js.JsCmds._
 import net.liftweb.common._
 import net.liftweb.mapper._
+import Helpers._
 
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
 class LiquiDocIndex {
+
+  def create(node : NodeSeq) : NodeSeq = {
+    var name= ""
+    Helpers.bind("doc", node,
+		 "input" -> SHtml.text(name, name = _),
+		 "create" -> SHtml.ajaxSubmit("create", () => create(name)))
+  }
+
+  def create(name : String) : JsCmd = {
+    if (name.trim.isEmpty) Noop else {
+      val sec = Section.create
+      sec.save
+      val doc = Document.create.name(name).head(sec)
+      doc.save
+      val content = Content.create.text(name).style("p")
+      content.save
+      val tag= Tag.create.name("root").doc(doc).isold(true)
+      tag.save
+      TagRef.create.tag(tag).section(sec).content(content).save
+      RedirectTo("/doc/"+name)
+    }
+  }
 
   def render(node : NodeSeq) : NodeSeq = 
     sort(Document.findAll).flatMap { 

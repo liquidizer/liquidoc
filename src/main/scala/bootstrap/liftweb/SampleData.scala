@@ -17,11 +17,11 @@ object SampleData {
     Tag.find(By(Tag.parent, tag), By(Tag.name, tag.name.is)).isEmpty
 
   def update() {
-    if (Tag.findAll.isEmpty) {
-      loadManifesto(new File("manifesto.xml"))
-      loadPA074(new File("PA074.xml"))
-      makeUpdateTag()
-    }
+    // if (Tag.findAll.isEmpty) {
+    //   loadManifesto(new File("manifesto.xml"))
+    //   loadPA074(new File("PA074.xml"))
+    //   makeUpdateTag()
+    // }
   }
 
   def makeUpdateTag() {

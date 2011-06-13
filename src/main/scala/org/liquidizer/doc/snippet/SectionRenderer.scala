@@ -11,12 +11,13 @@ import net.liftweb.mapper._
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
-class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) 
-extends Block[SectionRenderer](sec.id.is) {
+class SectionRenderer(val rootTag: Tag, val showTag: Tag, val sec: Section) 
+extends Block[SectionRenderer] {
   
   var random= new scala.util.Random
   val ref= rootTag.content(sec)
   var show= showTag.content(sec)
+  var showDiff= true
 
   val styles=List(
     ("h1", "Heading 1"),
@@ -26,13 +27,35 @@ extends Block[SectionRenderer](sec.id.is) {
     ("ol", "Numberd list item"))
 
   def newBlock() = {
-    new SectionRenderer(rootTag, showTag, Section.create)
+    // find existing sections cutting the current and the next one
+    var out= Link.findAll(By(Link.pre, sec)).map { _.post.is }
+    if (!next.isEmpty) {
+      val post= next.get.get.sec
+      var in= Link.findAll(By(Link.post, post)).map { _.pre.is }
+      out= out intersect in
+    }
+    // if no such section exists, create one
+    val newSect= out.firstOption
+    .map { 
+      id =>
+	Section.find(By(Section.id, id)).get 
+    }
+    .getOrElse { 
+      val s= Section.create
+      s.save
+      Link.create.pre(sec).post(s).save
+      if (!next.isEmpty) {
+	val post= next.get.get.sec
+	Link.create.pre(s).post(post).save
+      }
+      s
+    }
+    // create a renderer for the new section
+    new SectionRenderer(rootTag, showTag, newSect)
   }
 
   override def render(node : NodeSeq) : NodeSeq = {
-    <div id={"section-" + id}> { 
-      super.render(bind(node))
-    }</div>
+    bind(super.render(node))
   }
 
   def bind(node : NodeSeq) : NodeSeq = node.flatMap { bind(_) }
@@ -81,9 +104,9 @@ extends Block[SectionRenderer](sec.id.is) {
 
   def save() : JsCmd = {
     val showg= show.get
-    val dirty= showg.parent.obj.exists {
-     p => p.text.is!=showg.text.is || p.style.is!=showg.style.is
-    }
+    val dirty= 
+      showg.parent.map { _.text.is }.getOrElse("") != showg.text.is ||
+      showg.parent.map { _.style.is }.getOrElse("p") != showg.style.is
     if (dirty) {
       showg.save
       redraw(showg.parent.obj, show)
@@ -111,14 +134,18 @@ extends Block[SectionRenderer](sec.id.is) {
     val oldShowText= oldShow.map {_.text.is}.getOrElse ("")
     val newShowText= newShow.map {_.text.is}.getOrElse ("")
     val style= newShow.map {_.style.is}.getOrElse ("p")
-    
     format(style, {
-      if (oldShow==newShow) { 
-	DiffRenderer.renderDiff(refText, newShowText)
+      if (oldShow==newShow) {
+	showDiff= !showDiff
+	if (showDiff)
+	  Text(newShowText)
+	else
+	  DiffRenderer.renderDiff(refText, newShowText)
       } else {
+	showDiff= true
 	DiffRenderer.renderDiff(refText, oldShowText, newShowText)
-      } ++
-      editButton})
+      }} ++
+      editButton)
   }
   
   def format(style : String, body : NodeSeq) : NodeSeq = style match {
@@ -138,21 +165,28 @@ extends Block[SectionRenderer](sec.id.is) {
     <div id={"branches"+id}>{ branches() }</div>
 
   def branches() : NodeSeq = {
-    val tree= new TagTree(ref, show)
-    toHtml(List(tree))
+    toHtml(if (ref.isEmpty) {
+      TagRef.findAll(By(TagRef.section, sec))
+      .map { _.content.obj.get }
+      .filter { !_.parent.defined_? }
+      .map { content => new TagTree(Some(content), show) }
+    } else
+      List(new TagTree(ref, show)))
   }
 
-  def toHtml(trees : List[TagTree]) : NodeSeq = <ul> {
-    val h= trees.flatMap { tree => <li> { toHtml(tree) } </li> }
-    val n= if (trees.exists(_.containsCurrent))
-      trees.takeWhile(!_.containsCurrent).size + 2 else 0
-    new Uncover(h.elements, 5).next("branchvar"+random.nextInt, 5 max n) 
-  } </ul>
+  def toHtml(trees : List[TagTree]) : NodeSeq = 
+    if (trees.isEmpty) NodeSeq.Empty else
+      <ul> {
+	val h= trees.flatMap { tree => <li> { toHtml(tree) } </li> }
+	val n= if (trees.exists(_.containsCurrent))
+	  trees.takeWhile(!_.containsCurrent).size + 2 else 0
+	new Uncover(h.elements, 5).next("branchvar"+random.nextInt, 5 max n) 
+      } </ul>
 
   def toHtml(tree : TagTree) : NodeSeq = {
     val src= if (tree.isCurrent) "active" else "inactive"
     val img = <img src={"/images/"+src+".png"}/>
-    val icon = SHtml.a(() => { redraw(show, Some(tree.cur))}, img) 
+    val icon = SHtml.a(() => { redraw(show, tree.cur)}, img) 
     
     val subtree= 
       if (tree.isShown) {
@@ -203,5 +237,8 @@ extends Block[SectionRenderer](sec.id.is) {
       save()
     if (!show.isEmpty)
       TagRef.create.tag(tag).content(show).section(sec).save
+    next.foreach { _.get.makeTag(tag) }
   }
+
+  def isEmpty() = ref.isEmpty && show.isEmpty
 }

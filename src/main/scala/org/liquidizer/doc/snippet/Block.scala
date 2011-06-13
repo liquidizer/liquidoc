@@ -12,11 +12,14 @@ import Helpers._
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
-abstract class Block[T](val id : Long) {
+abstract class Block[T <: Block[T]] {
+  val id= scala.util.Random.nextLong
+
   var next : Option[Block[T]] = None
   var prev : Option[Block[T]] = None
 
   def newBlock() : Block[T]
+  def get() = asInstanceOf[T]
 
   def insert() = Text("[insert]")
   def delete() = Text("[delete]")
@@ -25,6 +28,7 @@ abstract class Block[T](val id : Long) {
     val sid= "block_"+id
     div(sid + "_deletable",
 	Helpers.bind("block", node,
+		     "id" -> Text(id.toString),
 		     "delete" -> renderDelete(sid),
 		     "insert" -> renderInsert(sid, node))
       ) ++ renderInsertAt(sid)
@@ -62,19 +66,25 @@ abstract class Block[T](val id : Long) {
     SetHtml(id+"_insert_at", renderInsertAt(block.id+"_pre") ++ 
 	    block.render(node))
   }
+
+  def append(block : Block[T]) {
+    if (next.isEmpty) {
+      next= Some(block)
+      block.prev= Some(this)
+    } else
+      next.get.append(block)
+  }
 }
 
-class MyBlock(id : Long) extends Block[MyBlock](id) {
-  val rnd= scala.util.Random
+class MyBlock extends Block[MyBlock] {
   def newBlock : MyBlock = {
-    val newId= rnd.nextLong
-    new MyBlock(newId)
+    new MyBlock()
   }
 }
 
 class BlockTest {
   def render(node : NodeSeq) : NodeSeq = {
-    val block= new MyBlock(0)
+    val block= new MyBlock
     block.render(node)
   }
 }
