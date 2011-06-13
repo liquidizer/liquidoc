@@ -11,11 +11,12 @@ import net.liftweb.mapper._
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
-class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
+class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) 
+extends Block[SectionRenderer](sec.id.is) {
   
   var random= new scala.util.Random
-  val ref= rootTag.content(sec).get
-  var show= showTag.content(sec).get
+  val ref= rootTag.content(sec)
+  var show= showTag.content(sec)
 
   val styles=List(
     ("h1", "Heading 1"),
@@ -24,10 +25,14 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     ("ul", "List item"),
     ("ol", "Numberd list item"))
 
-  val id= show.id.is
+  def newBlock() = {
+    new SectionRenderer(rootTag, showTag, Section.create)
+  }
 
-  def render(node : NodeSeq) : NodeSeq = {
-    <div id={"section-" + id}> { bind(node) }</div>
+  override def render(node : NodeSeq) : NodeSeq = {
+    <div id={"section-" + id}> { 
+      super.render(bind(node))
+    }</div>
   }
 
   def bind(node : NodeSeq) : NodeSeq = node.flatMap { bind(_) }
@@ -49,18 +54,22 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
 			    <img src="/images/edit.png" class="edit"/>)
 
   def toEditMode() = {
-    show= Content.create.parent(show).text(show.text.is).style(show.style.is)
+    val curText= show.map {_.text.is}.getOrElse("")
+    val curStyle= show.map {_.style.is}.getOrElse("p")
+    show= Some(Content.create.parent(show)
+	       .text(curText).style(curStyle))
     SetHtml("content"+id, editArea())
   }
 
   def editArea() : NodeSeq = {
     <table><tr><td colspan="2">{ 
-      SHtml.textarea(show.text.is, 
-		     text => show.text(text.split("\\s+").mkString(" ")),
+      SHtml.textarea(show.map{_.text.is}.getOrElse(""), 
+		     text => show.get.text(text.split("\\s+").mkString(" ")),
 		     "rows"->"15", "cols"->"80")
     }</td></tr><tr><td> {
       Text("Style: ") ++
-      SHtml.select(styles, Full(show.style.is), text => show.style(text) )
+      SHtml.select(styles, Full(show.get.style.is), 
+		   text => show.get.style(text) )
     }</td><td align="right"> {
       Text(" ") ++ saveButton() ++
       Text(" ") ++ cancelButton()
@@ -71,43 +80,45 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def cancelButton()= SHtml.ajaxSubmit("cancel", () => cancel())
 
   def save() : JsCmd = {
-    val dirty= show.parent.obj.exists {
-     p => p.text.is!=show.text.is || p.style.is!=show.style.is
+    val showg= show.get
+    val dirty= showg.parent.obj.exists {
+     p => p.text.is!=showg.text.is || p.style.is!=showg.style.is
     }
     if (dirty) {
-      show.save
-      redraw(show.parent.obj.get, show)
+      showg.save
+      redraw(showg.parent.obj, show)
     } else
       cancel()
   }
 
   def cancel() : JsCmd = {
-    show= show.parent.obj.get
+    show= show.get.parent.obj
     redraw
   }
 
   def redraw() : JsCmd = redraw(show, show)
 
-  def redraw(oldShow : Content, newShow : Content) : JsCmd = {
+  def redraw(oldShow : Option[Content], newShow : Option[Content]) 
+  : JsCmd = {
     show = newShow
-    SetHtml("content"+id, {
-      if (oldShow==newShow) { content() }
-      else { content(ref, oldShow, newShow) }}) &
+    SetHtml("content"+id, content(oldShow, newShow)) &
     SetHtml("edit"+id, editButton()) &
     SetHtml("branches"+id, branches())
   }
 
-  def content() = {
-    format(show.style.is,
-	DiffRenderer.renderDiff(ref.text.is, show.text.is) ++
-	editButton)
-  }
-
-  def content(ref : Content, oldShow : Content, newShow :Content) = {
-    format(newShow.style.is,
-	   DiffRenderer.renderDiff(ref.text.is, 
-				   oldShow.text.is, newShow.text.is) ++
-	   editButton)
+  def content(oldShow : Option[Content], newShow : Option[Content])={
+    val refText= ref.map {_.text.is}.getOrElse ("")
+    val oldShowText= oldShow.map {_.text.is}.getOrElse ("")
+    val newShowText= newShow.map {_.text.is}.getOrElse ("")
+    val style= newShow.map {_.style.is}.getOrElse ("p")
+    
+    format(style, {
+      if (oldShow==newShow) { 
+	DiffRenderer.renderDiff(refText, newShowText)
+      } else {
+	DiffRenderer.renderDiff(refText, oldShowText, newShowText)
+      } ++
+      editButton})
   }
   
   def format(style : String, body : NodeSeq) : NodeSeq = style match {
@@ -120,9 +131,12 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     case _ => <div class={"section-"+style}> { body } </div>
   }
 
-  def contentArea() = <div id={"content"+id} >{ content() }</div>
+  def contentArea() = 
+    <div id={"content"+id} >{ content(ref, show) }</div>
 
-  def branchArea() : NodeSeq = <div id={"branches"+id}>{ branches() }</div>
+  def branchArea() : NodeSeq = 
+    <div id={"branches"+id}>{ branches() }</div>
+
   def branches() : NodeSeq = {
     val tree= new TagTree(ref, show)
     toHtml(List(tree))
@@ -138,7 +152,7 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def toHtml(tree : TagTree) : NodeSeq = {
     val src= if (tree.isCurrent) "active" else "inactive"
     val img = <img src={"/images/"+src+".png"}/>
-    val icon = SHtml.a(() => { redraw(show, tree.cur)}, img) 
+    val icon = SHtml.a(() => { redraw(show, Some(tree.cur))}, img) 
     
     val subtree= 
       if (tree.isShown) {
@@ -183,9 +197,11 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
     }</a>
   }
 
+  /** Save tag references to persist current selection */
   def makeTag(tag : Tag) {
-    if (show.dirty_?)
+    if (show.exists{ _.dirty_?})
       save()
-    TagRef.create.tag(tag).content(show).section(sec).save
+    if (!show.isEmpty)
+      TagRef.create.tag(tag).content(show).section(sec).save
   }
 }
