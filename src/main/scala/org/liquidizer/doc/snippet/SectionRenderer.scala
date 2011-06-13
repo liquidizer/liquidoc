@@ -123,6 +123,10 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def contentArea() = <div id={"content"+id} >{ content() }</div>
 
   def branchArea() : NodeSeq = <div id={"branches"+id}>{ branches() }</div>
+  def branches() : NodeSeq = {
+    val tree= new TagTree(ref, show)
+    toHtml(List(tree))
+  }
 
   def toHtml(trees : List[TagTree]) : NodeSeq = <ul> {
     val h= trees.flatMap { tree => <li> { toHtml(tree) } </li> }
@@ -150,21 +154,21 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
       } else {
 	tagList(tree.refs)
       }
-    icon ++ subtree
-  }
-
-  def branches() : NodeSeq = {
-    val tree= new TagTree(ref, show)
-    toHtml(List(tree))
+    val votes= if (tree.refs.isEmpty) NodeSeq.Empty else
+      <span>{ " (" + tree.refs.size+") " }</span>
+    icon ++ votes ++ subtree
   }
 
   /** Show a list of named tags */
   def tagList(tags : List[Tag]) : NodeSeq = {
     var sorted= tags
-    if (tags.contains(showTag)) 
+    var n= 0
+    if (tags.contains(showTag)) {
       sorted=  showTag :: (sorted -- List(showTag))
+      n=1
+    }
     new Uncover(sorted.elements.map { tagLink(_) }, 3)
-    .next("branchvar"+random.nextInt, 3) 
+    .next("branchvar"+random.nextInt, n)
   }
 
   /** Format a tag as a permanent link to its content */
@@ -182,9 +186,6 @@ class SectionRenderer(val rootTag : Tag, val showTag : Tag, sec : Section) {
   def makeTag(tag : Tag) {
     if (show.dirty_?)
       save()
-    if (tag.content(sec)!=show)
-      TagRef.create.tag(tag).content(show).section(sec).save
+    TagRef.create.tag(tag).content(show).section(sec).save
   }
-
-  def isDirty() = show != showTag.content(sec).get
 }

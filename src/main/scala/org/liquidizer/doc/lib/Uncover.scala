@@ -12,8 +12,8 @@ import net.liftweb.mapper._
 class Uncover(val iter : Iterator[NodeSeq], val n : Int) {
 
   def addAction(node : NodeSeq, id : String) : NodeSeq = {
-    node.last match {
-      case <li>{item @ _*}</li> => 
+    node.lastOption match {
+      case Some(<li>{item @ _*}</li>) => 
         node ++ addLink(id, "li") ++ addContent(id)
       case _ if (iter.hasNext) => 
         node ++ addLink(id, "span") ++ addContent(id)
@@ -39,8 +39,7 @@ class Uncover(val iter : Iterator[NodeSeq], val n : Int) {
   def next(id : String, n : Int) : NodeSeq = {
     var h= NodeSeq.Empty
     while (iter.hasNext && h.size<n) h ++= iter.next
-    if (h.isEmpty) NodeSeq.Empty
-    else addAction(h, id)
+    addAction(h, id)
   }
 
   def next() : NodeSeq = next("uncover", n)
