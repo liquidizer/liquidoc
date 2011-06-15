@@ -14,6 +14,7 @@ import org.liquidizer.doc.lib._
 class SectionRenderer(val rootTag: Tag, val showTag: Tag, val sec: Section) 
 extends Block[SectionRenderer] {
   
+  val uri= S.uri
   var random= new scala.util.Random
   val ref= rootTag.content(sec)
   var show= showTag.content(sec)
@@ -224,7 +225,7 @@ extends Block[SectionRenderer] {
   def tagLink(tag : Tag) : NodeSeq = {
     Text(" ")++
     <a href={
-      Helpers.appendParams("/", Seq(
+      Helpers.appendParams(uri, Seq(
 	"root" -> rootTag.id.is.toString,
 	"show" -> tag.id.is.toString))}
       class={if (tag==showTag) "active" else "inactive"}>{

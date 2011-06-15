@@ -75,16 +75,3 @@ abstract class Block[T <: Block[T]] {
       next.get.append(block)
   }
 }
-
-class MyBlock extends Block[MyBlock] {
-  def newBlock : MyBlock = {
-    new MyBlock()
-  }
-}
-
-class BlockTest {
-  def render(node : NodeSeq) : NodeSeq = {
-    val block= new MyBlock
-    block.render(node)
-  }
-}

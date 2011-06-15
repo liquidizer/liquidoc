@@ -39,7 +39,7 @@ class Boot {
     LiftRules.statelessRewrite.append {
       case RewriteRequest(
         ParsePath(List("doc",doc),_,_,_),_,_) =>
-        RewriteResponse("index" :: Nil, Map("doc" -> doc))
+        RewriteResponse("liquidoc" :: Nil, Map("doc" -> doc))
     }
 
     LiftRules.early.append(makeUtf8)

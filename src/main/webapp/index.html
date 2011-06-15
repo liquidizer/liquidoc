@@ -1,39 +1,28 @@
 <lift:surround with="default">
-  <lift:bind-at name="title"><lift:LiquiDoc.title/></lift:bind-at>
+  <lift:bind-at name="title">Document Index</lift:bind-at>
   <lift:bind-at name="content">
+    <table class="index">
+      <tr>
+	<th>Document title</th>
+	<th># Tags</th>
+	<th>Latest edit</th>
+      </tr>
+      <lift:LiquiDocIndex>
+	<tr>
+	  <td><doc:title/></td>
+	  <td><doc:tags/></td>
+	  <td><doc:date/></td>
+	</tr>
+      </lift:LiquiDocIndex>
+    </table>
+    <hr/>
     <lift:form  method="POST">
-    <lift:LiquiDoc>
-      <div class="header">
-	<div style="float:right">
-	  <lift:PseudoLogin/>
-	</div>
-	<h2><doc:title/></h2>
-	<test:hasHistory>
-	  History: <span class="history"><doc:history/></span>
-	</test:hasHistory>
-      </div>
-      <hr/>
-      <doc:content>
-	<table class="sec">
-	  <tr>
-	    <td width="65%" rowspan="2"><sec:content/></td>
-	    <td width="3%" rowspan="2"/>
-	    <td width="32%" class="branches"><sec:branches/></td>
-	  </tr>
-	  <tr>
-	    <td valign="bottom">
-	      <ul><li><block:insert/></li></ul>
-	    </td>
-	  </tr>
-	</table>
-      </doc:content>
-      <div class="header" style="height:30px">
-	<div style="float:right">
-	  <doc:updateTag/>
-	</div>
-      </div>
-    </lift:LiquiDoc>
+      <lift:LiquiDocIndex.create>
+	<doc:input/>
+	<doc:create/>
+      </lift:LiquiDocIndex.create>
     </lift:form>
   </lift:bind-at>
 </lift:surround>
+
 
