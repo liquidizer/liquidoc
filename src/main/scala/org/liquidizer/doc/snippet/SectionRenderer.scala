@@ -134,6 +134,7 @@ extends Block[SectionRenderer] {
     val oldShowText= oldShow.map {_.text.is}.getOrElse ("")
     val newShowText= newShow.map {_.text.is}.getOrElse ("")
     val style= newShow.map {_.style.is}.getOrElse ("p")
+
     format(style, {
       if (oldShow==newShow) {
 	showDiff= !showDiff
