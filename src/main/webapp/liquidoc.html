@@ -1,0 +1,38 @@
+<lift:surround with="default">
+  <lift:bind-at name="title"><lift:LiquiDoc.title/></lift:bind-at>
+  <lift:bind-at name="content">
+    <lift:form  method="POST">
+    <lift:LiquiDoc>
+      <test:hasHistory>
+	History: <span class="history"><doc:history/></span>
+      </test:hasHistory>
+      <doc:content>
+	<table class="sec">
+	  <tr>
+	    <td width="65%" rowspan="2"><sec:content/></td>
+	    <td width="3%" rowspan="2"/>
+	    <td width="32%" class="branches"><sec:branches/></td>
+	  </tr>
+	  <tr>
+	    <td class="td_bottom">
+	      <ul><li><block:insert/></li></ul>
+	    </td>
+	  </tr>
+	</table>
+      </doc:content>
+      <div class="header" style="height:100px">
+	<div style="float:right">
+	  <doc:updateTag>
+	    <doc:submit/>
+	    <br/>
+	    <doc:diff/> Show differences
+	    <br/>
+	    <doc:perma/> Permanent
+	  </doc:updateTag>
+	</div>
+      </div>
+    </lift:LiquiDoc>
+    </lift:form>
+  </lift:bind-at>
+</lift:surround>
+

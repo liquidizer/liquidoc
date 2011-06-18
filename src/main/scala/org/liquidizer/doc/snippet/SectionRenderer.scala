@@ -55,6 +55,11 @@ extends Block[SectionRenderer] {
     // create a renderer for the new section
     new SectionRenderer(doc, newSect)
   }
+  override def insert() = 
+    <img src="/images/insert.png" alt="insert"/>
+
+  override def delete() = 
+    <img src="/images/delete.png" alt="delete" class="edit"/>
 
   override def render(node : NodeSeq) : NodeSeq = {
     bind(super.render(node))
@@ -75,10 +80,16 @@ extends Block[SectionRenderer] {
     case _ => node
   }
 
-  def editButton()= SHtml.a(()=> toEditMode(), 
-			    <img src="/images/edit.png" class="edit"/>)
+  def editButton() : NodeSeq = 
+    SHtml.a(()=> toEditMode(), 
+	    <img src="/images/edit.png" alt="edit" class="edit"/>) ++ 
+    deleteButton()
 
-  def toEditMode() = {
+  def deleteButton() : NodeSeq = 
+    if (prev.isEmpty) NodeSeq.Empty else
+    SHtml.a(()=> deleteMode(), delete)
+
+  def toEditMode() : JsCmd = {
     val curText= show.map {_.text.is}.getOrElse("")
     val curStyle= show.map {_.style.is}.getOrElse("p")
     show= Some(Content.create.parent(show)
@@ -121,6 +132,13 @@ extends Block[SectionRenderer] {
   def cancel() : JsCmd = {
     show= show.get.parent.obj
     redraw
+  }
+
+  def deleteMode() : JsCmd = {
+    if (ref.isEmpty) super.deleteBlock(id)
+    else {
+      redraw(show, None)
+    }
   }
 
   def redraw() : JsCmd = redraw(show, show)
@@ -234,12 +252,20 @@ extends Block[SectionRenderer] {
   }
 
   /** Save tag references to persist current selection */
-  def makeTag(tag : Tag) {
+  def makeTag(tag : Tag, pre : Option[Section] = None) {
     if (show.exists{ _.dirty_?})
       save()
-    if (!show.isEmpty)
+    var pre2= pre
+    if (!show.isEmpty) {
       TagRef.create.tag(tag).content(show).section(sec).save
-    next.foreach { _.get.makeTag(tag) }
+      pre2= Some(sec)
+      if (!pre.isEmpty) {
+	if (Link.find(By(Link.pre, pre.get), By(Link.post, sec)).isEmpty) {
+	  Link.create.pre(pre.get).post(sec).save
+	}
+      }
+    }
+    next.foreach { _.get.makeTag(tag, pre2) }
   }
 
   def isEmpty() = ref.isEmpty && show.isEmpty

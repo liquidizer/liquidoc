@@ -7,6 +7,7 @@ import net.liftweb.http.js._
 import net.liftweb.http.js.JsCmds._
 import net.liftweb.common._
 import net.liftweb.mapper._
+import Helpers._
 
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
@@ -47,7 +48,7 @@ class LiquiDoc {
       case "tagName" => Text(showTag.name.is)
       case "history" => history()
       case "content" => render(doc.head.obj.get, children)
-      case "updateTag" => SHtml.ajaxSubmit("UpdateTag", ()=>{ updateTag })
+      case "updateTag" => renderUpdateTag(children)
     }
 
     case Elem(prefix, label, attribs, scope, children @ _*) =>
@@ -75,7 +76,18 @@ class LiquiDoc {
     (a--b).flatMap { sec => render(sec, node) }
   }
 
-  def updateTag() : JsCmd = {
+  def renderUpdateTag(node : NodeSeq ) : NodeSeq = {
+    var diff= true
+    var perma= true
+    Helpers
+    .bind("doc", node,
+	  "diff" -> SHtml.checkbox(diff, diff = _),
+	  "perma" -> SHtml.checkbox(perma, perma = _),  
+	  "submit" -> SHtml.ajaxSubmit("MakeTag", ()=>updateTag(diff,perma))
+	)
+  }
+
+  def updateTag(makeDiff : Boolean, perma : Boolean) : JsCmd = {
     if (PseudoLogin.loggedIn) {
       val name= PseudoLogin.userName
 
@@ -86,40 +98,23 @@ class LiquiDoc {
       newTag.time(TimeUtil.now)
       newTag.save
       helpers.foreach { _.makeTag(newTag) }
-      RedirectTo(linkUri(newTag))
+      RedirectTo(linkUri(newTag, makeDiff, !perma))
     } else {
       Noop
     }
   }
 
-  def linkUri(target : Tag, head : Boolean = false) : String = {
-    val params= Seq(
-      "root"->rootTag.id.is.toString, 
-      "show"-> (if (head) "#"+target.name.is else target.id.is.toString))
+  def linkUri(target : Tag, diff : Boolean = true, head : Boolean = false) 
+  : String = {
+    val tid= if (head) "#"+target.name.is else target.id.is.toString
+    val params= if (diff)
+      Seq("root" -> rootTag.id.is.toString, "show" -> tid)
+    else
+      Seq("root" -> tid)
     Helpers.appendParams(docUri, params)
   }
 
-  def history() : NodeSeq = {
-    val name= showTag.name.is
-    val fixHead= showId.exists (_.startsWith("#"))
-    val tags= Tag.findAll(By(Tag.name, name), By(Tag.doc, doc),
-			  OrderBy(Tag.time, Ascending))
-    var x=0
-    <a href={linkUri(rootTag, false)} class="inactive">{ "[ROOT]" }</a> ++
-    Text(" ") ++
-    tags.flatMap { tag =>
-      val href= linkUri(tag)
-      val style= if (tag==showTag) "active" else "inactive"
-      x+=1
-      <a href={href} class={style}>{ "["+x+"]" }</a> ++ Text(" ")
-    } ++ 
-      <a href={linkUri(showTag, !fixHead)} class={
-	if (fixHead) "active" else"inactive"}>{ 
-	  "[HEAD]" }</a> ++
-    <span> { TimeUtil.formatRelTime(showTag.time.is) } </span>
-  }
-
-  def error(msg : String) = SetHtml("error", <div class="error">{msg}</div>)
+  def history() : NodeSeq = NodeSeq.Empty
     
 }
 

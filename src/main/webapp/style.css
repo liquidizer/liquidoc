@@ -22,6 +22,10 @@ td,th {
     vertical-align: top;
     padding: 1px;
 }
+td.td_bottom {
+    vertical-align: bottom;
+}
+
 hr {
     color: black;
     background-color: black;

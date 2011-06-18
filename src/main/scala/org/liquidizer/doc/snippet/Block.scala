@@ -13,7 +13,7 @@ import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
 abstract class Block[T <: Block[T]] {
-  val id= scala.util.Random.nextLong
+  val id= "block_"+scala.util.Random.nextLong
 
   var next : Option[Block[T]] = None
   var prev : Option[Block[T]] = None
@@ -21,17 +21,16 @@ abstract class Block[T <: Block[T]] {
   def newBlock() : Block[T]
   def get() = asInstanceOf[T]
 
-  def insert() = Text("[insert]")
-  def delete() = Text("[delete]")
+  def insert() : NodeSeq = Text("[insert]")
+  def delete() : NodeSeq = Text("[delete]")
 
   def render(node : NodeSeq) : NodeSeq = {
-    val sid= "block_"+id
-    div(sid + "_deletable",
+    div(id + "_deletable",
 	Helpers.bind("block", node,
 		     "id" -> Text(id.toString),
-		     "delete" -> renderDelete(sid),
-		     "insert" -> renderInsert(sid, node))
-      ) ++ renderInsertAt(sid)
+		     "delete" -> renderDelete(id),
+		     "insert" -> renderInsert(id, node))
+      ) ++ renderInsertAt(id)
   }
 
   def div(id : String, node : NodeSeq) = 
