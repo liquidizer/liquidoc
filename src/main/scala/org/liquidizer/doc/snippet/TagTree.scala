@@ -21,10 +21,9 @@ class TagTree(val cur : Option[Content], val show : Option[Content]) {
 
   val refs : List[Tag] = { 
     if (cur.isEmpty) Nil else {
-      TagRef.findAll(By(TagRef.content, cur.get))
-      .map { _.tag.obj.get }
-      .filter { !_.isold.is } ++ 
-      children.flatMap { _.refs }
+      val refs= TagRef.findAll(By(TagRef.content, cur.get)).map {_.tag.is}
+      val tags= Tag.findAll(By(Tag.isold,false), ByList(Tag.id, refs))
+      tags ++ children.flatMap { _.refs }
     }.removeDuplicates
   }
 

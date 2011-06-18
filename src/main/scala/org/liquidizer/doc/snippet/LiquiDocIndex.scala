@@ -27,9 +27,9 @@ class LiquiDocIndex {
       sec.save
       val doc = Document.create.name(name).head(sec)
       doc.save
-      val content = Content.create.text(name).style("p")
+      val content = Content.create.text(name).style("h1")
       content.save
-      val tag= Tag.create.name("root").doc(doc).isold(true)
+      val tag= Tag.create.doc(doc).isold(true)
       tag.save
       TagRef.create.tag(tag).section(sec).content(content).save
       RedirectTo("/doc/"+name)

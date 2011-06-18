@@ -13,7 +13,7 @@ import org.liquidizer.doc.lib._
 
 class LiquiDoc {
 
-  val uri= S.uri
+  val docUri= S.uri
 
   val doc : Document= S.param("doc").map { 
     doc => Document.find(By(Document.name, doc)).get
@@ -57,7 +57,7 @@ class LiquiDoc {
   }
 
   def render(sec : Section, node : NodeSeq) : NodeSeq = {
-    val helper= new SectionRenderer(rootTag, showTag, sec)
+    val helper= new SectionRenderer(this, sec)
     (if (helper.isEmpty) NodeSeq.Empty else {
       if (helpers.isEmpty) 
 	helpers= Some(helper)
@@ -96,7 +96,7 @@ class LiquiDoc {
     val params= Seq(
       "root"->rootTag.id.is.toString, 
       "show"-> (if (head) "#"+target.name.is else target.id.is.toString))
-    Helpers.appendParams(uri, params)
+    Helpers.appendParams(docUri, params)
   }
 
   def history() : NodeSeq = {

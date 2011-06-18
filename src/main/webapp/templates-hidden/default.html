@@ -15,11 +15,13 @@
   </head>
   <body>
     <div class="header">
-      <div style="float:right">
-	<lift:PseudoLogin/>
-      </div>
-      <a href="/">[Index]</a>
-      <h1><lift:bind name="title"/></h1>
+      <lift:form  method="POST">
+	<div style="float:right">
+	  <lift:PseudoLogin/>
+	</div>
+	<a href="/">[Index]</a>
+	<h1><lift:bind name="title"/></h1>
+      </lift:form>
     </div>
     <hr/>
 

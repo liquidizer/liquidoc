@@ -11,10 +11,11 @@ import net.liftweb.mapper._
 import org.liquidizer.doc.model._
 import org.liquidizer.doc.lib._
 
-class SectionRenderer(val rootTag: Tag, val showTag: Tag, val sec: Section) 
+class SectionRenderer(val doc: LiquiDoc, val sec: Section) 
 extends Block[SectionRenderer] {
   
-  val uri= S.uri
+  val rootTag= doc.rootTag
+  val showTag= doc.showTag
   var random= new scala.util.Random
   val ref= rootTag.content(sec)
   var show= showTag.content(sec)
@@ -52,7 +53,7 @@ extends Block[SectionRenderer] {
       s
     }
     // create a renderer for the new section
-    new SectionRenderer(rootTag, showTag, newSect)
+    new SectionRenderer(doc, newSect)
   }
 
   override def render(node : NodeSeq) : NodeSeq = {
@@ -110,6 +111,8 @@ extends Block[SectionRenderer] {
       showg.parent.map { _.style.is }.getOrElse("p") != showg.style.is
     if (dirty) {
       showg.save
+      if (!showg.parent.defined_?)
+	TagRef.create.section(sec).content(showg).save
       redraw(showg.parent.obj, show)
     } else
       cancel()
@@ -168,7 +171,7 @@ extends Block[SectionRenderer] {
 
   def branches() : NodeSeq = {
     toHtml(if (ref.isEmpty) {
-      TagRef.findAll(By(TagRef.section, sec))
+      TagRef.findAll(By(TagRef.section, sec), NullRef(TagRef.tag))
       .map { _.content.obj.get }
       .filter { !_.parent.defined_? }
       .map { content => new TagTree(Some(content), show) }
@@ -179,10 +182,10 @@ extends Block[SectionRenderer] {
   def toHtml(trees : List[TagTree]) : NodeSeq = 
     if (trees.isEmpty) NodeSeq.Empty else
       <ul> {
-	val h= trees.flatMap { tree => <li> { toHtml(tree) } </li> }
+	val h= trees.map { tree => <li> { toHtml(tree) } </li> }
 	val n= if (trees.exists(_.containsCurrent))
 	  trees.takeWhile(!_.containsCurrent).size + 2 else 0
-	new Uncover(h.elements, 5).next("branchvar"+random.nextInt, 5 max n) 
+	new Uncover(h, 5).next("branchvar"+random.nextInt, 5 max n) 
       } </ul>
 
   def toHtml(tree : TagTree) : NodeSeq = {
@@ -217,17 +220,14 @@ extends Block[SectionRenderer] {
       sorted=  showTag :: (sorted -- List(showTag))
       n=1
     }
-    new Uncover(sorted.elements.map { tagLink(_) }, 3)
-    .next("branchvar"+random.nextInt, n)
+    new Uncover(sorted.map { tagLink(_) }, 3)
+    .next("branchvar"+random.nextInt, 1)
   }
 
   /** Format a tag as a permanent link to its content */
   def tagLink(tag : Tag) : NodeSeq = {
     Text(" ")++
-    <a href={
-      Helpers.appendParams(uri, Seq(
-	"root" -> rootTag.id.is.toString,
-	"show" -> tag.id.is.toString))}
+    <a href={ doc.linkUri(tag) }
       class={if (tag==showTag) "active" else "inactive"}>{
       tag.name.is
     }</a>
