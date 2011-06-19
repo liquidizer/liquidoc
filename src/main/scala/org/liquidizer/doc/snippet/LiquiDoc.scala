@@ -46,6 +46,7 @@ class LiquiDoc {
     case Elem("doc", tag, attribs, scope, children @ _*) =>
     tag match {
       case "title" => title(node)
+      case "score" => score(node)
       case "tagName" => Text(showTag.name.is)
       case "content" => render(doc.head.obj.get, children)
       case "updateTag" => renderUpdateTag(children)
@@ -55,6 +56,11 @@ class LiquiDoc {
       Elem(prefix, label, attribs, scope, render(children) : _*)
 
     case _ => node
+  }
+
+  def score(node : NodeSeq) : NodeSeq = {
+    val links= DocTagVoter.voterTags(doc).flatMap { tagLink(_) }
+    new Uncover(links, 3).next("score", 3)
   }
 
   def buildSectionRenderers(sec : Section) {
@@ -123,6 +129,16 @@ class LiquiDoc {
       Seq("root" -> tid)
     Helpers.appendParams(docUri, params)
   }
+
+  /** Format a tag as a permanent link to its content */
+  def tagLink(tag : Tag) : NodeSeq = {
+    Text(" ")++
+    <a href={ linkUri(tag) }
+      class={if (tag==showTag) "active" else "inactive"}>{
+      tag.name.is
+    }</a>
+  }
+
 }
 
 

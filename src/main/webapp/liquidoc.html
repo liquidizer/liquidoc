@@ -1,5 +1,8 @@
 <lift:surround with="default">
   <lift:bind-at name="title"><lift:LiquiDoc.title/></lift:bind-at>
+  <lift:bind-at name="header">
+    Most favored tags: <lift:LiquiDoc.score/>
+  </lift:bind-at>
   <lift:bind-at name="content">
     <lift:form  method="POST">
     <lift:LiquiDoc>
