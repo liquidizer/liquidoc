@@ -20,6 +20,7 @@ abstract class Block[T <: Block[T]] {
 
   def newBlock() : Block[T]
   def get() = asInstanceOf[T]
+  def toList() : List[T]= get() :: next.map { _.toList }.getOrElse(Nil)
 
   def insertIcon() : NodeSeq = Text("[insert]")
   def deleteIcon() : NodeSeq = Text("[delete]")

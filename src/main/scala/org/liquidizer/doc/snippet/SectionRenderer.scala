@@ -105,7 +105,7 @@ extends Block[SectionRenderer] {
   }
 
   def favorButton() : NodeSeq = 
-    SHtml.a(() => favor(show), favorIcon())
+    SHtml.a(() => favorShown(), favorIcon())
 
   def editButton() : NodeSeq = 
     if (!PseudoLogin.loggedIn) NodeSeq.Empty else {
@@ -157,7 +157,14 @@ extends Block[SectionRenderer] {
     redraw
   }
 
-  def favor(what : Option[Content]) : JsCmd = {
+  def favorShown() : JsCmd = {
+    if (show.exists{ _.dirty_?}) save()
+    favor(show)
+    showDiff= true
+    redraw()
+  }
+
+  def favor(what : Option[Content]) {
     val mytag= doc.getMyTag()
     val ref= TagRef.find(By(TagRef.tag, mytag), By(TagRef.section, sec))
     .getOrElse { 
@@ -167,8 +174,6 @@ extends Block[SectionRenderer] {
       ref.delete_!
     else
       ref.content(what.get).save
-    showDiff= true
-    redraw()
   }
 
   /** Insert action is blocked if an empty edit section exits */
@@ -289,23 +294,6 @@ extends Block[SectionRenderer] {
       new Uncover(tags.map { doc.tagLink(_) }, 3)
       .next(id+"li"+random.nextInt, 0)
     }
-
-  /** Save tag references to persist current selection */
-  def makeTag(tag : Tag, pre : Option[Section] = None) {
-    if (show.exists{ _.dirty_?})
-      save()
-    var pre2= pre
-    if (!show.isEmpty) {
-      TagRef.create.tag(tag).content(show).section(sec).save
-      pre2= Some(sec)
-      if (!pre.isEmpty) {
-	if (Link.find(By(Link.pre, pre.get), By(Link.post, sec)).isEmpty) {
-	  Link.create.pre(pre.get).post(sec).save
-	}
-      }
-    }
-    next.foreach { _.get.makeTag(tag, pre2) }
-  }
 
   def isEmpty() = ref.isEmpty && show.isEmpty
 }

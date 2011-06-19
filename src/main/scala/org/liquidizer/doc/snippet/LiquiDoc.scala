@@ -88,33 +88,64 @@ class LiquiDoc {
   def renderUpdateTag(node : NodeSeq ) : NodeSeq = {
     var diff= true
     var perma= true
+    var vote= true
     Helpers
     .bind("doc", node,
 	  "diff" -> SHtml.checkbox(diff, diff = _),
 	  "perma" -> SHtml.checkbox(perma, perma = _),  
-	  "submit" -> SHtml.ajaxSubmit("MakeTag", ()=>updateTag(diff,perma))
+	  "vote" -> SHtml.checkbox(vote, vote = _),  
+	  "submit" -> SHtml.ajaxSubmit("MakeTag", ()=>
+	    updateTag(diff,perma,vote))
 	)
   }
 
   def getMyTag() : Tag = {
     val user= PseudoLogin.userName
-    Tag.find(By(Tag.name, user),  By(Tag.isold, false)).getOrElse{
+    Tag.find(By(Tag.name, user),  By(Tag.isold, false), By(Tag.doc, doc))
+    .getOrElse{
       Tag.create.name(user).doc(doc).saveMe 
     }
   }
 
-  def updateTag(makeDiff : Boolean, perma : Boolean) : JsCmd = {
+  def updateTag(makeDiff : Boolean, perma : Boolean, vote : Boolean) 
+  : JsCmd = {
     if (PseudoLogin.loggedIn) {
       val name= PseudoLogin.userName
+      val tag = getMyTag()
+      var pre : Option[Section] = None
 
-      Tag.findAll(By(Tag.name,name), By(Tag.isold,false), By(Tag.doc,doc))
-      .foreach { _.isold(true) .save }
+      // vote for all shown sections
+      if (vote) {
+	for (helper <- helpers.get.toList) {
+	  helper.favorShown()
 
-      val newTag = Tag.create.name(name).doc(doc)
-      newTag.time(TimeUtil.now)
-      newTag.save
-      helpers.foreach { _.makeTag(newTag) }
-      RedirectTo(linkUri(newTag, makeDiff, !perma))
+	  if (!helper.show.isEmpty) {
+	    val sec= helper.sec
+	    if (!pre.isEmpty) {
+	      val link= Link.find(By(Link.pre, pre.get), By(Link.post, sec))
+	      if (link.isEmpty) {
+		Link.create.pre(pre.get).post(sec).save
+	      }
+	    }
+	    pre= Some(sec)
+	  }
+	}
+      }
+
+      // Copy all references to a new version
+      if (perma) {
+	tag.isold(true).save
+	val newTag= Tag.create.name(tag.name).doc(tag.doc).time(TimeUtil.now)
+	newTag.save
+	TagRef.findAll(By(TagRef.tag,tag)).foreach {
+	  ref =>
+	    TagRef.create
+	    .tag(newTag).content(ref.content).section(ref.section)
+	    .save
+	}
+      }
+
+      RedirectTo(linkUri(tag, makeDiff, !perma))
     } else {
       Noop
     }
