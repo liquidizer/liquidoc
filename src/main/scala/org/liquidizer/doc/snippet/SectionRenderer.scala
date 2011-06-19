@@ -256,7 +256,10 @@ extends Block[SectionRenderer] {
 
   def toHtml(tree : TagTree, n : Int) : NodeSeq = {
     val src= if (tree.isCurrent) "active" else {
-      if (tree.refs.exists { _.name.is== PseudoLogin.userName } )
+      val user= PseudoLogin.userName
+      if (tree.refs.exists { _.name.is==user } &&
+	  (!tree.isShown || 
+	   !tree.children.exists{ _.refs.exists { _.name.is==user}}))
 	"favored"
       else
 	"inactive"
