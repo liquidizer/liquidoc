@@ -14,7 +14,11 @@ import org.liquidizer.doc.lib._
 class PseudoLogin {
   
   val uri= S.uri
-  val root= S.param("root").getOrElse("1")
+
+  val keep= List("root","show")
+  val params= Map( 
+    keep.map(key => (key, S.param(key)))
+    .filter( !_._2.isEmpty).map { case (key,value) => (key , value.get) } :_*)
 
   def render(node : NodeSeq) : NodeSeq = 
     <div id="pseudoLogin">{ render() }</div>
@@ -25,12 +29,16 @@ class PseudoLogin {
       Text("Logged in as ")++ render(name)++ Text(" ") ++
       SHtml.ajaxSubmit("Logout", () => {
 	PseudoLogin.user.set(None)
-	SetHtml("pseudoLogin", render) })
+	SetHtml("pseudoLogin", render) &
+	RedirectTo(Helpers.appendParams(uri, params.toSeq))
+      })
     } else {
       SHtml.text("", name => {
 	PseudoLogin.user.set(if (name.trim.isEmpty) None else Some(name))
       }) ++
-      SHtml.ajaxSubmit("Login", () => SetHtml("pseudoLogin", render()))
+      SHtml.ajaxSubmit("Login", () => 
+	SetHtml("pseudoLogin", render()) &
+	RedirectTo(Helpers.appendParams(uri, params.toSeq)))
     }
   }
 
@@ -40,8 +48,8 @@ class PseudoLogin {
       Text(name)
     else {
       val tagId= tag.get.id.is.toString
-      <a href={Helpers.appendParams(uri, Seq("root"-> root, 
-				    "show" -> tagId))}>{name}</a>
+      val p2= (params + ("show" -> tagId)).toSeq
+      <a href={Helpers.appendParams(uri, p2) }> { name }</a>
     } 
   }
 }

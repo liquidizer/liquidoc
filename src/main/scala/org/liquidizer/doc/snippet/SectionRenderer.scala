@@ -60,10 +60,22 @@ extends Block[SectionRenderer] {
       isec => !TagRef.find(By(TagRef.section, isec)).isEmpty})
       <img src="/images/insert_active.png" alt="insert"/>
     else
-      <img src="/images/insert.png" alt="insert"/>
+      <img src="/images/insert.png" alt="insert" title="insert"/>
 
   override def deleteIcon() = 
-    <img src="/images/delete.png" alt="delete" class="edit"/>
+    <img src="/images/delete.png" alt="delete" title="delete"/>
+
+  def editIcon() = 
+    <img src="/images/edit.png" alt="edit" title="edit"/>
+
+  def favorIcon() = {
+    val mytag= doc.getMyTag()
+    if (TagRef.find(By(TagRef.tag,mytag),By(TagRef.section,sec),
+		    By(TagRef.content, show)).isEmpty)
+	<img src="/images/favor.png"/>
+    else
+      <img src="/images/favor_active.png"/>  
+  }
 
   override def render(node : NodeSeq) : NodeSeq = {
     bind(super.render(node))
@@ -84,14 +96,13 @@ extends Block[SectionRenderer] {
     case _ => node
   }
 
-  def editButton() : NodeSeq = 
-    SHtml.a(()=> toEditMode(), 
-	    <img src="/images/edit.png" alt="edit" class="edit"/>) ++ 
-    deleteButton()
+  def favorButton() : NodeSeq = 
+    SHtml.a(() => favor(show), favorIcon())
 
-  def deleteButton() : NodeSeq = 
-    if (prev.isEmpty) NodeSeq.Empty else
-    SHtml.a(()=> deleteMode(), deleteIcon())
+  def editButton() : NodeSeq = 
+    if (!PseudoLogin.loggedIn) NodeSeq.Empty else {
+      SHtml.a(()=> toEditMode(), editIcon()) ++ favorButton
+    }
 
   def toEditMode() : JsCmd = {
     val curText= show.map {_.text.is}.getOrElse("")
@@ -138,7 +149,29 @@ extends Block[SectionRenderer] {
     redraw
   }
 
-  def deleteMode() : JsCmd = {
+  def favor(what : Option[Content]) : JsCmd = {
+    val mytag= doc.getMyTag()
+    val ref= TagRef.find(By(TagRef.tag, mytag), By(TagRef.section, sec))
+    .getOrElse { 
+      TagRef.create.tag(mytag).section(sec) 
+    }
+    if (what.isEmpty)
+      ref.delete_!
+    else
+      ref.content(what.get).save
+    showDiff= true
+    redraw()
+  }
+
+  /** Insert action is blocked if an empty edit section exits */
+  override def insertBlock(id : String, node : NodeSeq) : JsCmd = {
+    if ((isEmpty || next.exists { _.get.isEmpty }) &&
+      intersect(sec, next.map {_.get.sec}).isEmpty) Noop
+    else super.insertBlock(id, node)
+  }
+
+  /** Delete block strokes reference text or makes block disappear */
+  override def deleteBlock(id : String) : JsCmd = {
     if (ref.isEmpty) super.deleteBlock(id)
     else {
       redraw(show, None)

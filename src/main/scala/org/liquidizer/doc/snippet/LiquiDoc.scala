@@ -89,6 +89,13 @@ class LiquiDoc {
 	)
   }
 
+  def getMyTag() : Tag = {
+    val user= PseudoLogin.userName
+    Tag.find(By(Tag.name, user),  By(Tag.isold, false)).getOrElse{
+      Tag.create.name(user).doc(doc).saveMe 
+    }
+  }
+
   def updateTag(makeDiff : Boolean, perma : Boolean) : JsCmd = {
     if (PseudoLogin.loggedIn) {
       val name= PseudoLogin.userName
