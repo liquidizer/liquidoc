@@ -17,8 +17,8 @@ object SampleData {
     Tag.find(By(Tag.parent, tag), By(Tag.name, tag.name.is)).isEmpty
 
   def update() {
+    loadManifesto(new File("manifesto.xml"))
     // if (Tag.findAll.isEmpty) {
-    //   loadManifesto(new File("manifesto.xml"))
     //   loadPA074(new File("PA074.xml"))
     //   makeUpdateTag()
     // }
@@ -85,8 +85,13 @@ object SampleData {
         case Elem(_, "h3", attribs, scope,  ch @ _*) =>
 	  makeContent("h2", ch.text)
 
+        case Elem(_, "h4", attribs, scope,  ch @ _*) =>
+	  makeContent("h3", ch.text)
+
 	case Elem(_, "p", attribs, scope, ch @_*) =>
-	  makeContent("p", ch.text)
+	  val text= ch.text.trim
+	  if (!text.isEmpty)
+	    makeContent("p", text)
 
 	case Elem(_, "ol", attribs, scope, ch @_*) =>
 	  for (li <- node \\ "li")

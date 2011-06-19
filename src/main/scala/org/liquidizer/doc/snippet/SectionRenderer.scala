@@ -24,6 +24,7 @@ extends Block[SectionRenderer] {
   val styles=List(
     ("h1", "Heading 1"),
     ("h2", "Heading 2"),
+    ("h3", "Heading 3"),
     ("p" , "Paragraph"),
     ("ul", "List item"),
     ("ol", "Numberd list item"))

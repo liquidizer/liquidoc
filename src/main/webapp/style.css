@@ -14,7 +14,9 @@ body {
     padding: 10px;
     background-color: lightgray;
 }
-
+h1 {
+    font-size: 14pt;
+}
 h2 {
     margin: 0 0 2px 0;
 }
@@ -88,11 +90,14 @@ a {
 }
 
 .section-h1 {
+    font-size: 18pt;
+    font-weight : bold;
+}
+.section-h2 {
     font-size: 16pt;
     font-weight : bold;
 }
-
-.section-h2 {
+.section-h3 {
     font-size: 14pt;
     font-weight : bold;
 }
