@@ -232,60 +232,58 @@ extends Block[SectionRenderer] {
     <div id={"branches"+id}>{ branches() }</div>
 
   def branches() : NodeSeq = {
-    toHtml(if (ref.isEmpty) {
+    val trees = if (ref.isEmpty) {
       TagRef.findAll(By(TagRef.section, sec), NullRef(TagRef.tag))
       .map { _.content.obj.get }
       .filter { !_.parent.defined_? }
       .map { content => new TagTree(Some(content), show) }
+      .sort { _.refs.size > _.refs.size }
     } else
-      List(new TagTree(ref, show)))
+      List(new TagTree(ref, show))
+    toHtml(trees, trees.map { _.refs.size }.foldLeft(0) { _ + _ }
+)
   }
 
-  def toHtml(trees : List[TagTree]) : NodeSeq = 
+  def toHtml(trees : List[TagTree], total : Int) : NodeSeq = 
     if (trees.isEmpty) NodeSeq.Empty else
       <ul> {
-	val h= trees.map { tree => <li> { toHtml(tree) } </li> }
+	val h= trees.map { tree => <li> { toHtml(tree, total) } </li> }
 	val n= if (trees.exists(_.containsCurrent))
 	  trees.takeWhile(!_.containsCurrent).size + 2 else 0
 	new Uncover(h, 5).next("branchvar"+random.nextInt, 5 max n) 
       } </ul>
 
-  def toHtml(tree : TagTree) : NodeSeq = {
-    val src= if (tree.isCurrent) "active" else "inactive"
+  def toHtml(tree : TagTree, n : Int) : NodeSeq = {
+    val src= if (tree.isCurrent) "active" else {
+      if (tree.refs.exists { _.name.is== PseudoLogin.userName } )
+	"favored"
+      else
+	"inactive"
+    }
     val img = <img src={"/images/"+src+".png"}/>
     val icon = SHtml.a(() => { redraw(show, tree.cur)}, img) 
     
-    val votes= if (tree.refs.isEmpty) NodeSeq.Empty else
-      <span>{ " (" + tree.refs.size+") " }</span>
-
     val subtree= 
       if (tree.isShown) {
 	val tags = tree.refs -- tree.children.flatMap( _.refs )
-	tagList(tags) ++ {
-	  if (!tree.isCurrent && tags.isEmpty && tree.children.size<=1)
-	    <div class="compact"> {
-	      toHtml(tree.children)
-	    } </div>
-	  else
-	    toHtml(tree.children)
-	}
+	if (!tree.isCurrent && tags.isEmpty && tree.children.size<=1)
+	  <div class="compact"> {
+	    toHtml(tree.children, n)
+	  } </div>
+	else
+	  tagList(tags, n) ++ toHtml(tree.children, n)
       } else {
-        tagList(tree.refs)
+        tagList(tree.refs, n)
       }
-    icon ++ votes ++ subtree
+    icon ++ subtree
   }
 
   /** Show a list of named tags */
-  def tagList(tags : List[Tag]) : NodeSeq = {
-    var sorted= tags
-    var n= 0
-    if (tags.contains(showTag)) {
-      sorted=  showTag :: (sorted -- List(showTag))
-      n=1
+  def tagList(tags : List[Tag], total : Int) : NodeSeq =
+    if (tags.size==0) NodeSeq.Empty else {
+      Text(" %2.0f%% ".format(100.0* tags.size/total)) ++
+      new Uncover(tags.map { tagLink(_) }, 3).next(id+"li"+random.nextInt, 0)
     }
-    new Uncover(sorted.map { tagLink(_) }, 3)
-    .next("branchvar"+random.nextInt, 1)
-  }
 
   /** Format a tag as a permanent link to its content */
   def tagLink(tag : Tag) : NodeSeq = {
