@@ -21,8 +21,11 @@ abstract class Block[T <: Block[T]] {
   def newBlock() : Block[T]
   def get() = asInstanceOf[T]
 
-  def insert() : NodeSeq = Text("[insert]")
-  def delete() : NodeSeq = Text("[delete]")
+  def insertIcon() : NodeSeq = Text("[insert]")
+  def deleteIcon() : NodeSeq = Text("[delete]")
+
+  def renderAll(node : NodeSeq) : NodeSeq =
+    render(node) ++ next.map { _.renderAll(node) }.getOrElse(NodeSeq.Empty)
 
   def render(node : NodeSeq) : NodeSeq = {
     div(id + "_deletable",
@@ -38,11 +41,11 @@ abstract class Block[T <: Block[T]] {
 
   def renderDelete(id : String) : NodeSeq = 
     if (prev.isEmpty) NodeSeq.Empty else
-      SHtml.a(() => deleteBlock(id), delete())
+      SHtml.a(() => deleteBlock(id), deleteIcon())
 
   def renderInsert(id : String, node : NodeSeq) : NodeSeq = 
     <span id={id+"_insert"}> {
-      SHtml.a(() => { insertBlock(id, node) }, insert())
+      SHtml.a(() => { insertBlock(id, node) }, insertIcon())
     } </span>
   
   def renderInsertAt(id : String) : NodeSeq =

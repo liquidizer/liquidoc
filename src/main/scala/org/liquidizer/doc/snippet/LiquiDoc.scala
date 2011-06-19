@@ -32,7 +32,7 @@ class LiquiDoc {
   var helpers : Option[SectionRenderer] = None
 
   def title(node : NodeSeq) : NodeSeq = 
-    Text(doc.name.is + " : " + showTag.name.is)
+    Text(doc.name.is)
 
   def render(node : NodeSeq) : NodeSeq = node.flatMap { render(_) }
 
@@ -46,7 +46,6 @@ class LiquiDoc {
     tag match {
       case "title" => title(node)
       case "tagName" => Text(showTag.name.is)
-      case "history" => history()
       case "content" => render(doc.head.obj.get, children)
       case "updateTag" => renderUpdateTag(children)
     }
@@ -57,23 +56,26 @@ class LiquiDoc {
     case _ => node
   }
 
-  def render(sec : Section, node : NodeSeq) : NodeSeq = {
-    val helper= new SectionRenderer(this, sec)
-    (if (helper.isEmpty) NodeSeq.Empty else {
-      if (helpers.isEmpty) 
-	helpers= Some(helper)
-      else
-	helpers.get.append(helper)
-      helper.render(node) 
-    }) ++ renderFollowing(sec,node)
-  } 
+  def buildSectionRenderers(sec : Section) {
+    helpers= Some(new SectionRenderer(this, sec))
 
-  def renderFollowing(sec : Section, node : NodeSeq) : NodeSeq = {
-    val a= Link.findAll(By(Link.pre, sec)).map { _.post.obj.get }
-    val b= Link.findAll(ByList(Link.pre, a.map { _.id.is }))
-    .map { _.post.obj.get }
-    
-    (a--b).flatMap { sec => render(sec, node) }
+    var list= List(sec.id.is)
+    while (!list.isEmpty) {
+      val a= Link.findAll(ByList(Link.pre, list)).map { _.post.obj.get }
+      val b= Link.findAll(ByList(Link.pre, a.map { _.id.is }))
+      .map { _.post.obj.get }
+      for (nsec <- (a--b)) {
+	val helper= new SectionRenderer(this, nsec)
+	if (!helper.isEmpty)
+	  helpers.get.append(helper)
+      }
+      list= (a--b).map { _.id.is }
+    }
+  }
+
+  def render(sec : Section, node : NodeSeq) : NodeSeq = {
+    buildSectionRenderers(sec)
+    helpers.get.renderAll(node)
   }
 
   def renderUpdateTag(node : NodeSeq ) : NodeSeq = {
@@ -94,7 +96,7 @@ class LiquiDoc {
       Tag.findAll(By(Tag.name,name), By(Tag.isold,false), By(Tag.doc,doc))
       .foreach { _.isold(true) .save }
 
-      val newTag = Tag.create.name(name).doc(doc).parent(showTag)
+      val newTag = Tag.create.name(name).doc(doc)
       newTag.time(TimeUtil.now)
       newTag.save
       helpers.foreach { _.makeTag(newTag) }
@@ -113,9 +115,6 @@ class LiquiDoc {
       Seq("root" -> tid)
     Helpers.appendParams(docUri, params)
   }
-
-  def history() : NodeSeq = NodeSeq.Empty
-    
 }
 
 

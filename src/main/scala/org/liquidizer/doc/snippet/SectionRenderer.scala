@@ -28,20 +28,20 @@ extends Block[SectionRenderer] {
     ("ul", "List item"),
     ("ol", "Numberd list item"))
 
-  def newBlock() = {
-    // find existing sections cutting the current and the next one
-    var out= Link.findAll(By(Link.pre, sec)).map { _.post.is }
-    if (!next.isEmpty) {
-      val post= next.get.get.sec
-      var in= Link.findAll(By(Link.post, post)).map { _.pre.is }
+  /** find existing sections cutting two existing ones */
+  def intersect(pre : Section, post : Option[Section]) : List[Section]= {
+    var out= Link.findAll(By(Link.pre, pre)).map { _.post.is }
+    if (!post.isEmpty) {
+      var in= Link.findAll(By(Link.post, post.get)).map { _.pre.is }
       out= out intersect in
     }
-    // if no such section exists, create one
+    Section.findAll(ByList(Section.id, out))
+  }
+
+  def newBlock() = {
+    // if no section exists, create one
+    var out= intersect(sec, next.map { _.get.sec })
     val newSect= out.firstOption
-    .map { 
-      id =>
-	Section.find(By(Section.id, id)).get 
-    }
     .getOrElse { 
       val s= Section.create
       s.save
@@ -55,10 +55,14 @@ extends Block[SectionRenderer] {
     // create a renderer for the new section
     new SectionRenderer(doc, newSect)
   }
-  override def insert() = 
-    <img src="/images/insert.png" alt="insert"/>
+  override def insertIcon() =
+    if (intersect(sec, next.map {_.get.sec}).exists { 
+      isec => !TagRef.find(By(TagRef.section, isec)).isEmpty})
+      <img src="/images/insert_active.png" alt="insert"/>
+    else
+      <img src="/images/insert.png" alt="insert"/>
 
-  override def delete() = 
+  override def deleteIcon() = 
     <img src="/images/delete.png" alt="delete" class="edit"/>
 
   override def render(node : NodeSeq) : NodeSeq = {
@@ -87,7 +91,7 @@ extends Block[SectionRenderer] {
 
   def deleteButton() : NodeSeq = 
     if (prev.isEmpty) NodeSeq.Empty else
-    SHtml.a(()=> deleteMode(), delete)
+    SHtml.a(()=> deleteMode(), deleteIcon())
 
   def toEditMode() : JsCmd = {
     val curText= show.map {_.text.is}.getOrElse("")
@@ -168,7 +172,7 @@ extends Block[SectionRenderer] {
 	showDiff= true
 	DiffRenderer.renderDiff(refText, oldShowText, newShowText)
       }} ++
-      editButton)
+      Text(" ") ++ editButton)
   }
   
   def format(style : String, body : NodeSeq) : NodeSeq = style match {
@@ -182,7 +186,7 @@ extends Block[SectionRenderer] {
   }
 
   def contentArea() = 
-    <div id={"content"+id} >{ content(ref, show) }</div>
+    <div id={"content"+id} >{ content(show, show) }</div>
 
   def branchArea() : NodeSeq = 
     <div id={"branches"+id}>{ branches() }</div>
@@ -211,6 +215,9 @@ extends Block[SectionRenderer] {
     val img = <img src={"/images/"+src+".png"}/>
     val icon = SHtml.a(() => { redraw(show, tree.cur)}, img) 
     
+    val votes= if (tree.refs.isEmpty) NodeSeq.Empty else
+      <span>{ " (" + tree.refs.size+") " }</span>
+
     val subtree= 
       if (tree.isShown) {
 	val tags = tree.refs -- tree.children.flatMap( _.refs )
@@ -223,10 +230,8 @@ extends Block[SectionRenderer] {
 	    toHtml(tree.children)
 	}
       } else {
-	tagList(tree.refs)
+        tagList(tree.refs)
       }
-    val votes= if (tree.refs.isEmpty) NodeSeq.Empty else
-      <span>{ " (" + tree.refs.size+") " }</span>
     icon ++ votes ++ subtree
   }
 
