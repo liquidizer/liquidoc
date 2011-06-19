@@ -59,11 +59,18 @@ extends Block[SectionRenderer] {
     if (intersect(sec, next.map {_.get.sec}).exists { 
       isec => !TagRef.find(By(TagRef.section, isec)).isEmpty})
       <img src="/images/insert_active.png" alt="insert"/>
-    else
-      <img src="/images/insert.png" alt="insert" title="insert"/>
+    else {
+      if (PseudoLogin.loggedIn)
+	<img src="/images/insert.png" alt="insert" title="insert"/>
+      else 
+	NodeSeq.Empty
+    }
 
-  override def deleteIcon() = 
-    <img src="/images/delete.png" alt="delete" title="delete"/>
+  override def deleteIcon() =
+    if (PseudoLogin.loggedIn)
+      <img src="/images/delete.png" alt="delete" title="delete"/>
+    else
+      NodeSeq.Empty
 
   def editIcon() = 
     <img src="/images/edit.png" alt="edit" title="edit"/>
@@ -172,7 +179,7 @@ extends Block[SectionRenderer] {
 
   /** Delete block strokes reference text or makes block disappear */
   override def deleteBlock(id : String) : JsCmd = {
-    if (ref.isEmpty) super.deleteBlock(id)
+    if (ref.isEmpty && show.isEmpty) super.deleteBlock(id)
     else {
       redraw(show, None)
     }

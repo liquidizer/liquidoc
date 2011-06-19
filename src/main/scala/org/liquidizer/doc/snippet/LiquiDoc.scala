@@ -40,6 +40,7 @@ class LiquiDoc {
     case Elem("test", tag, attribs, scope, children @ _*) =>
       if (tag match {
 	case "hasHistory" => rootTag != showTag
+	case "loggedIn" => PseudoLogin.loggedIn
       }) render(node.child) else NodeSeq.Empty
 
     case Elem("doc", tag, attribs, scope, children @ _*) =>
