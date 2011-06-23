@@ -19,15 +19,9 @@ extends Block[SectionRenderer] {
   var random= new scala.util.Random
   val ref= rootTag.content(sec)
   var show= showTag.content(sec)
+  var lastEdit : Box[Content]= None
+  var trees= refreshTrees()
   var showDiff= true
-
-  val styles=List(
-    ("h1", "Heading 1"),
-    ("h2", "Heading 2"),
-    ("h3", "Heading 3"),
-    ("p" , "Paragraph"),
-    ("ul", "List item"),
-    ("ol", "Numberd list item"))
 
   /** find existing sections cutting two existing ones */
   def intersect(pre : Section, post : Option[Section]) : List[Section]= {
@@ -56,6 +50,7 @@ extends Block[SectionRenderer] {
     // create a renderer for the new section
     new SectionRenderer(doc, newSect)
   }
+
   override def insertIcon() =
     if (intersect(sec, next.map {_.get.sec}).exists { 
       isec => !TagRef.find(By(TagRef.section, isec)).isEmpty})
@@ -68,7 +63,7 @@ extends Block[SectionRenderer] {
     }
 
   override def deleteIcon() =
-    if (PseudoLogin.loggedIn)
+    if (PseudoLogin.loggedIn || ref.isEmpty)
       <img src="/images/delete.png" alt="delete" title="delete"/>
     else
       NodeSeq.Empty
@@ -94,6 +89,7 @@ extends Block[SectionRenderer] {
   def bind(node : Node) : NodeSeq = node match {
     case Elem("sec", tag, attrib, scope, children @ _*) =>
       tag match {
+        case "control" => controlArea()
         case "content" => contentArea()
 	case "branches" => branchArea()
       }
@@ -104,18 +100,21 @@ extends Block[SectionRenderer] {
     case _ => node
   }
 
-  def favorButton() : NodeSeq = 
-    SHtml.a(() => favorShown(), favorIcon())
+  def controlArea() : NodeSeq = <div id={"control_"+id}>{
+    editButton() ++ <br/> ++ super.renderDelete(id)
+  }</div>
+
+  def favorButton() : NodeSeq = SHtml.a(() => favorShown(), favorIcon())
 
   def editButton() : NodeSeq = 
     if (!PseudoLogin.loggedIn) NodeSeq.Empty else {
-      SHtml.a(()=> toEditMode(), editIcon()) ++ favorButton
+      SHtml.a(()=> toEditMode(), editIcon()) 
     }
 
   def toEditMode() : JsCmd = {
     val curText= show.map {_.text.is}.getOrElse("")
     val curStyle= show.map {_.style.is}.getOrElse("p")
-    show= Some(Content.create.parent(show)
+    show= Some(Content.create.parent(show.or(ref))
 	       .text(curText).style(curStyle))
     SetHtml("content"+id, editArea())
   }
@@ -127,7 +126,7 @@ extends Block[SectionRenderer] {
 		     "rows"->"15", "cols"->"80")
     }</td></tr><tr><td> {
       Text("Style: ") ++
-      SHtml.select(styles, Full(show.get.style.is), 
+      SHtml.select(Content.styles, Full(show.get.style.is), 
 		   text => show.get.style(text) )
     }</td><td align="right"> {
       Text(" ") ++ saveButton() ++
@@ -139,17 +138,33 @@ extends Block[SectionRenderer] {
   def cancelButton()= SHtml.ajaxSubmit("cancel", () => cancel())
 
   def save() : JsCmd = {
-    val showg= show.get
+    var showg= show.get
+    val oldShow= showg.parent.obj
     val dirty= 
       showg.parent.map { _.text.is }.getOrElse("") != showg.text.is ||
       showg.parent.map { _.style.is }.getOrElse("p") != showg.style.is
     if (dirty) {
-      showg.save
-      if (!showg.parent.defined_?)
+      if (showg.parent.defined_?) {
+	// repetitive edits should not show up in history
+	if (showg.parent.obj == lastEdit &&
+	    Content.find(By(Content.parent, showg)).isEmpty) {
+	  showg.parent.obj.get
+	  .text(showg.text.is).style(showg.style.is)
+	  showg= showg.parent.obj.get
+	  show= Some(showg)
+	}
+      } else {
+	// top level content 
 	TagRef.create.section(sec).content(showg).save
-      redraw(showg.parent.obj, show)
-    } else
+      }
+      showg.save
+      lastEdit= Full(showg)
+      favor(doc.getMyTag, false)
+      trees= refreshTrees()
+      redraw(oldShow, show)
+    } else {
       cancel()
+    }
   }
 
   def cancel() : JsCmd = {
@@ -159,21 +174,20 @@ extends Block[SectionRenderer] {
 
   def favorShown() : JsCmd = {
     if (show.exists{ _.dirty_?}) save()
-    favor(show)
+    favor(doc.getMyTag(), true)
     showDiff= true
-    redraw()
+    SetHtml("branches"+id, branches())
   }
 
-  def favor(what : Option[Content]) {
-    val mytag= doc.getMyTag()
+  def favor(mytag : Tag, toggle : Boolean= false) {
     val ref= TagRef.find(By(TagRef.tag, mytag), By(TagRef.section, sec))
     .getOrElse { 
       TagRef.create.tag(mytag).section(sec) 
     }
-    if (what.isEmpty)
+    if (show.isEmpty || (toggle && ref.content.obj==show))
       ref.delete_!
     else
-      ref.content(what.get).save
+      ref.content(show.get).save
   }
 
   /** Insert action is blocked if an empty edit section exits */
@@ -187,7 +201,11 @@ extends Block[SectionRenderer] {
   override def deleteBlock(id : String) : JsCmd = {
     if (ref.isEmpty && show.isEmpty) super.deleteBlock(id)
     else {
-      redraw(show, None)
+      trees= refreshTrees()
+      if (show.isEmpty)
+	redraw(show, ref)
+      else
+	redraw(show, None)
     }
   }
 
@@ -218,7 +236,7 @@ extends Block[SectionRenderer] {
 	showDiff= true
 	DiffRenderer.renderDiff(refText, oldShowText, newShowText)
       }} ++
-      Text(" ") ++ editButton)
+      Text(" "))
   }
   
   def format(style : String, body : NodeSeq) : NodeSeq = style match {
@@ -237,33 +255,32 @@ extends Block[SectionRenderer] {
   def branchArea() : NodeSeq = 
     <div id={"branches"+id}>{ branches() }</div>
 
-  def branches() : NodeSeq = {
-    val trees = if (ref.isEmpty) {
-      TagRef.findAll(By(TagRef.section, sec), NullRef(TagRef.tag))
-      .map { _.content.obj.get }
-      .filter { !_.parent.defined_? }
-      .map { content => new TagTree(Some(content), show) }
-      .sort { _.refs.size > _.refs.size }
+  def refreshTrees() : List[TagTree] = {
+    if (ref.isEmpty) {
+      TagTree.getTrees(sec)
     } else
-      List(new TagTree(ref, show))
-    toHtml(trees, trees.map { _.refs.size }.foldLeft(0) { _ + _ }
-)
+      List(new TagTree(ref))
+  }
+
+  def branches() : NodeSeq = {
+    trees.foreach { _.refreshRefs }
+    toHtml(trees, trees.map { _.refs.size }.foldLeft(0) { _ + _ })
   }
 
   def toHtml(trees : List[TagTree], total : Int) : NodeSeq = 
     if (trees.isEmpty) NodeSeq.Empty else
       <ul> {
 	val h= trees.map { tree => <li> { toHtml(tree, total) } </li> }
-	val n= if (trees.exists(_.containsCurrent))
-	  trees.takeWhile(!_.containsCurrent).size + 2 else 0
+	val n= if (trees.exists(_.containsCurrent(show)))
+	  trees.takeWhile(!_.containsCurrent(show)).size + 2 else 0
 	new Uncover(h, 5).next("branchvar"+random.nextInt, 5 max n) 
       } </ul>
 
   def toHtml(tree : TagTree, n : Int) : NodeSeq = {
-    val src= if (tree.isCurrent) "active" else {
+    val src= if (tree.isCurrent(show)) "active" else {
       val user= PseudoLogin.userName
       if (tree.refs.exists { _.name.is==user } &&
-	  (!tree.isShown || 
+	  (!tree.isShown(show) || 
 	   !tree.children.exists{ _.refs.exists { _.name.is==user}}))
 	"favored"
       else
@@ -272,10 +289,11 @@ extends Block[SectionRenderer] {
     val img = <img src={"/images/"+src+".png"}/>
     val icon = SHtml.a(() => { redraw(show, tree.cur)}, img) 
     
+    // formatting the sub trees recursively
     val subtree= 
-      if (tree.isShown) {
+      if (tree.isShown(show)) {
 	val tags = tree.refs -- tree.children.flatMap( _.refs )
-	if (!tree.isCurrent && tags.isEmpty && tree.children.size<=1)
+	if (!tree.isCurrent(show) && tags.isEmpty && tree.children.size<=1)
 	  <div class="compact"> {
 	    toHtml(tree.children, n)
 	  } </div>
@@ -284,7 +302,15 @@ extends Block[SectionRenderer] {
       } else {
         tagList(tree.refs, n)
       }
-    icon ++ subtree
+
+    // button to favor current view
+    val favor= if (PseudoLogin.loggedIn) {
+      if (tree.isCurrent(show)) 
+	favorButton() else <span style="margin: 0 20px 0 20px"/>
+    } else NodeSeq.Empty
+
+    // cancat the answer
+    icon ++ favor ++ subtree
   }
 
   /** Show a list of named tags */

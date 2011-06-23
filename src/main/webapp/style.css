@@ -54,14 +54,22 @@ a {
     color: darkkhaki;
 }
 
-.content img {
-    margin-left: 5px;
-    vertical-align: top;
+.score a {
+    margin: 0 5px 0 5px;
+}
+
+.control {
+    text-align:right;
+    vertical-align:middle;
 }
 
 .branches {
     padding: 0px;
     margin: 0px;
+}
+
+.branches img {
+    margin: 0 0 0 5px;
 }
 
 .compact {

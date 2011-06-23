@@ -88,14 +88,11 @@ class LiquiDoc {
   def renderUpdateTag(node : NodeSeq ) : NodeSeq = {
     var diff= true
     var perma= true
-    var vote= true
     Helpers
     .bind("doc", node,
 	  "diff" -> SHtml.checkbox(diff, diff = _),
 	  "perma" -> SHtml.checkbox(perma, perma = _),  
-	  "vote" -> SHtml.checkbox(vote, vote = _),  
-	  "submit" -> SHtml.ajaxSubmit("MakeTag", ()=>
-	    updateTag(diff,perma,vote))
+	  "submit" -> SHtml.ajaxSubmit("MakeTag", ()=> updateTag(diff,perma))
 	)
   }
 
@@ -107,30 +104,11 @@ class LiquiDoc {
     }
   }
 
-  def updateTag(makeDiff : Boolean, perma : Boolean, vote : Boolean) 
-  : JsCmd = {
+  def updateTag(makeDiff : Boolean, perma : Boolean) : JsCmd = {
     if (PseudoLogin.loggedIn) {
       val name= PseudoLogin.userName
       val tag = getMyTag()
       var pre : Option[Section] = None
-
-      // vote for all shown sections
-      if (vote) {
-	for (helper <- helpers.get.toList) {
-	  helper.favorShown()
-
-	  if (!helper.show.isEmpty) {
-	    val sec= helper.sec
-	    if (!pre.isEmpty) {
-	      val link= Link.find(By(Link.pre, pre.get), By(Link.post, sec))
-	      if (link.isEmpty) {
-		Link.create.pre(pre.get).post(sec).save
-	      }
-	    }
-	    pre= Some(sec)
-	  }
-	}
-      }
 
       // Copy all references to a new version
       if (perma) {
@@ -142,6 +120,24 @@ class LiquiDoc {
 	    TagRef.create
 	    .tag(newTag).content(ref.content).section(ref.section)
 	    .save
+	}
+      }
+
+      // vote for all shown sections
+      if (perma || !makeDiff) {
+	for (helper <- helpers.get.toList) {
+	  helper.favor(tag)
+
+	  if (!helper.show.isEmpty) {
+	    val sec= helper.sec
+	    if (!pre.isEmpty) {
+	      val link= Link.find(By(Link.pre, pre.get), By(Link.post, sec))
+	      if (link.isEmpty) {
+		Link.create.pre(pre.get).post(sec).save
+	      }
+	    }
+	    pre= Some(sec)
+	  }
 	}
       }
 
@@ -163,7 +159,6 @@ class LiquiDoc {
 
   /** Format a tag as a permanent link to its content */
   def tagLink(tag : Tag) : NodeSeq = {
-    Text(" ")++
     <a href={ linkUri(tag) }
       class={if (tag==showTag) "active" else "inactive"}>{
       tag.name.is
