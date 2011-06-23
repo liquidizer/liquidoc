@@ -45,7 +45,8 @@ class TagTree(val cur : Option[Content]) {
 
 object TagTree {
   def getTrees(sec : Section) : List[TagTree] = {
-    TagRef.findAll(By(TagRef.section, sec), NullRef(TagRef.tag))
+    TagRef.findAll(By(TagRef.section, sec), NotNullRef(TagRef.content),
+		   NullRef(TagRef.tag))
     .map { _.content.obj.get }
     .filter { !_.parent.defined_? }
     .map { content => new TagTree(Some(content)) }

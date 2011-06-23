@@ -18,7 +18,7 @@ extends Block[SectionRenderer] {
   val showTag= doc.showTag
   var random= new scala.util.Random
   val ref= rootTag.content(sec)
-  var show= showTag.content(sec)
+  var show= showTag.content(sec).or(ref)
   var lastEdit : Box[Content]= None
   var trees= refreshTrees()
   var showDiff= true
@@ -155,6 +155,7 @@ extends Block[SectionRenderer] {
 	}
       } else {
 	// top level content 
+	showg.save
 	TagRef.create.section(sec).content(showg).save
       }
       showg.save
@@ -315,7 +316,7 @@ extends Block[SectionRenderer] {
 
   /** Show a list of named tags */
   def tagList(tags : List[Tag], total : Int) : NodeSeq =
-    if (tags.size==0) NodeSeq.Empty else {
+    if (tags.size==0 || tags.size==total) NodeSeq.Empty else {
       Text(" %2.0f%% ".format(100.0* tags.size/total)) ++
       new Uncover(tags.map { doc.tagLink(_) }, 3)
       .next(id+"li"+random.nextInt, 0)

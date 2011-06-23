@@ -160,7 +160,7 @@ class LiquiDoc {
   /** Format a tag as a permanent link to its content */
   def tagLink(tag : Tag) : NodeSeq = {
     <a href={ linkUri(tag) }
-      class={if (tag==showTag) "active" else "inactive"}>{
+      class={if (tag==showTag) "tag active" else "tag inactive"}>{
       tag.name.is
     }</a>
   }
