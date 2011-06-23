@@ -9,15 +9,11 @@ class Tag extends LongKeyedMapper[Tag] with IdPK {
   object name extends MappedString(this, 50)
   object time extends MappedLong(this)
   object isold extends MappedBoolean(this)
-
-  object parent extends LongMappedMapper(this, Tag)
   object doc extends LongMappedMapper(this, Document)
 
   def content(sec : Section) : Box[Content] = {
-    val c= TagRef.find(By(TagRef.tag, this), By(TagRef.section, sec))
-    if (c.isEmpty) {
-      if (parent.isEmpty) Empty else parent.obj.get.content(sec) 
-    } else c.get.content.obj
+    TagRef.find(By(TagRef.tag, this), By(TagRef.section, sec))
+    .map { _.content.obj.get }
   }
 }
 

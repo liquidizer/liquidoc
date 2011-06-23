@@ -13,9 +13,6 @@ object SampleData {
   var current : Option[Section]= None
   var tag : Option[Tag]= None
 
-  def isHead(tag : Tag) = 
-    Tag.find(By(Tag.parent, tag), By(Tag.name, tag.name.is)).isEmpty
-
   def update() {
     // loadManifesto(new File("manifesto.xml"))
   }
@@ -25,7 +22,6 @@ object SampleData {
       var sec:Option[Section] = doc.head.obj
       val otag= Tag.find(By(Tag.doc, doc))
       val tag= Tag.create.name("PA074").time(TimeUtil.now).doc(doc)
-      tag.parent(otag)
       tag.save
       while (!sec.isEmpty) {
 	val ref= TagRef.find(By(TagRef.section, sec.get)).get
