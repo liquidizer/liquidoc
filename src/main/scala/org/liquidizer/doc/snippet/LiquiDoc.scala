@@ -23,11 +23,11 @@ class LiquiDoc {
   }
 
   val rootTag : Tag = S.param("root")
-  .map { Tag.get(_).get }
+  .map { Tag.get(_, doc).get }
   .getOrElse(Tag.find(By(Tag.doc, doc)).get)
 
   val showId= S.param("show")
-  val showTag= showId.map( Tag.get(_).get).getOrElse(rootTag)
+  val showTag= showId.map( Tag.get(_, doc).get).getOrElse(rootTag)
 
   var helpers : Option[SectionRenderer] = None
 

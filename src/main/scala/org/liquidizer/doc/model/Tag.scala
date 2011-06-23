@@ -22,9 +22,11 @@ class Tag extends LongKeyedMapper[Tag] with IdPK {
 }
 
 object Tag extends Tag with LongKeyedMetaMapper[Tag] {
-  def get(id : String) : Option[Tag] = 
+  def get(id : String, doc : Document) : Option[Tag] = 
     if (id.startsWith("#")) 
-      Tag.find(By(Tag.name, id.substring(1)), OrderBy(Tag.id, Descending))
+      Tag.find(By(Tag.name, id.substring(1)), 
+	       By(Tag.isold,false), By(Tag.doc, doc),
+	       OrderBy(Tag.id, Descending))
     else Tag.find(By(Tag.id, id.toLong))
 }
 
