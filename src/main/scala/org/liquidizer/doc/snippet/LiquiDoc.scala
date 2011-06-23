@@ -49,7 +49,7 @@ class LiquiDoc {
       case "score" => score(node)
       case "tagName" => Text(showTag.name.is)
       case "content" => render(doc.head.obj.get, children)
-      case "updateTag" => renderUpdateTag(children)
+      case "updateTag" => renderMakeTag(children)
     }
 
     case Elem(prefix, label, attribs, scope, children @ _*) =>
@@ -85,15 +85,8 @@ class LiquiDoc {
     helpers.get.renderAll(node)
   }
 
-  def renderUpdateTag(node : NodeSeq ) : NodeSeq = {
-    var diff= true
-    var perma= true
-    Helpers
-    .bind("doc", node,
-	  "diff" -> SHtml.checkbox(diff, diff = _),
-	  "perma" -> SHtml.checkbox(perma, perma = _),  
-	  "submit" -> SHtml.ajaxSubmit("MakeTag", ()=> updateTag(diff,perma))
-	)
+  def renderMakeTag(node : NodeSeq) : NodeSeq = {
+    SHtml.a(()=> makeTag(), node)
   }
 
   def getMyTag() : Tag = {
@@ -104,47 +97,28 @@ class LiquiDoc {
     }
   }
 
-  def updateTag(makeDiff : Boolean, perma : Boolean) : JsCmd = {
-    if (PseudoLogin.loggedIn) {
-      val name= PseudoLogin.userName
-      val tag = getMyTag()
-      var pre : Option[Section] = None
+  def makeTag() : JsCmd = {
+    val name= PseudoLogin.userName
+    val tag = Tag.create.name(name).doc(doc).isold(true)
+    var pre : Option[Section] = None
 
-      // Copy all references to a new version
-      if (perma) {
-	tag.isold(true).save
-	val newTag= Tag.create.name(tag.name).doc(tag.doc).time(TimeUtil.now)
-	newTag.save
-	TagRef.findAll(By(TagRef.tag,tag)).foreach {
-	  ref =>
-	    TagRef.create
-	    .tag(newTag).content(ref.content).section(ref.section)
-	    .save
-	}
-      }
+    // vote for all shown sections
+    for (helper <- helpers.get.toList) {
+      helper.favor(tag, false)
 
-      // vote for all shown sections
-      if (perma || !makeDiff) {
-	for (helper <- helpers.get.toList) {
-	  helper.favor(tag)
-
-	  if (!helper.show.isEmpty) {
-	    val sec= helper.sec
-	    if (!pre.isEmpty) {
-	      val link= Link.find(By(Link.pre, pre.get), By(Link.post, sec))
-	      if (link.isEmpty) {
-		Link.create.pre(pre.get).post(sec).save
-	      }
-	    }
-	    pre= Some(sec)
+      if (!helper.show.isEmpty) {
+	val sec= helper.sec
+	if (!pre.isEmpty) {
+	  val link= Link.find(By(Link.pre, pre.get), By(Link.post, sec))
+	  if (link.isEmpty) {
+	    Link.create.pre(pre.get).post(sec).save
 	  }
 	}
+	pre= Some(sec)
       }
-
-      RedirectTo(linkUri(tag, makeDiff, !perma))
-    } else {
-      Noop
     }
+
+    RedirectTo(linkUri(tag))
   }
 
   def linkUri(target : Tag, diff : Boolean = true, head : Boolean = false) 
