@@ -104,7 +104,7 @@ class LiquiDoc {
     val user= PseudoLogin.userName
     Tag.find(By(Tag.name, user),  By(Tag.isold, false), By(Tag.doc, doc))
     .getOrElse{
-      Tag.create.name(user).doc(doc).time(TimeUtil.now).saveMe 
+      Tag.create.name(user).doc(doc).time(TimeUtil.now)
     }
   }
 

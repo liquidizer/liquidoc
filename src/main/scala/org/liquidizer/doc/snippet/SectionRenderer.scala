@@ -73,7 +73,8 @@ extends Block[SectionRenderer] {
 
   def favorIcon() = {
     val mytag= doc.getMyTag()
-    if (TagRef.find(By(TagRef.tag,mytag),By(TagRef.section,sec),
+    if (mytag.dirty_? ||
+      TagRef.find(By(TagRef.tag,mytag),By(TagRef.section,sec),
 		    By(TagRef.content, show)).isEmpty)
 	<img src="/images/favor.png"/>
     else
