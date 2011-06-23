@@ -318,7 +318,7 @@ extends Block[SectionRenderer] {
   /** Show a list of named tags */
   def tagList(tags : List[Tag], total : Int) : NodeSeq =
     if (tags.size==0) NodeSeq.Empty else {
-      if (tags.size==total) NodeSeq.Empty else {
+      { if (tags.size==total) NodeSeq.Empty else
 	Text(" %2.0f%% ".format(100.0* tags.size/total)) } ++
       new Uncover(tags.map { doc.tagLink(_) }, 3)
       .next(id+"li"+random.nextInt, 0)

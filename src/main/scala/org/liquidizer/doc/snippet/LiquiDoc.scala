@@ -46,10 +46,13 @@ class LiquiDoc {
     case Elem("doc", tag, attribs, scope, children @ _*) =>
     tag match {
       case "title" => title(node)
-      case "score" => score(node)
+      case "rootTag" => renderVersion(rootTag)
+      case "showTag" => renderVersion(showTag)
+      case "score" => renderScore(node)
       case "tagName" => Text(showTag.name.is)
       case "content" => render(doc.head.obj.get, children)
       case "updateTag" => renderMakeTag(children)
+      case "toRoot" => renderToRoot(children)
     }
 
     case Elem(prefix, label, attribs, scope, children @ _*) =>
@@ -58,9 +61,9 @@ class LiquiDoc {
     case _ => node
   }
 
-  def score(node : NodeSeq) : NodeSeq = {
+  def renderScore(node : NodeSeq) : NodeSeq = {
     val links= DocTagVoter.voterTags(doc).flatMap { tagLink(_) }
-    new Uncover(links, 3).next("score", 3)
+    new Uncover(links, 3).next("score", 5)
   }
 
   def buildSectionRenderers(sec : Section) {
@@ -85,15 +88,23 @@ class LiquiDoc {
     helpers.get.renderAll(node)
   }
 
+  def renderToRoot(node : NodeSeq) : NodeSeq =
+    <a href={linkUri(showTag, false, true)}>{node}</a>
+
   def renderMakeTag(node : NodeSeq) : NodeSeq = {
     SHtml.a(()=> makeTag(), node)
+  }
+
+  def renderVersion(tag : Tag) : NodeSeq = {
+    tagLink(tag) ++ 
+    Text(" " + TimeUtil.formatRelTime(tag.time.is))
   }
 
   def getMyTag() : Tag = {
     val user= PseudoLogin.userName
     Tag.find(By(Tag.name, user),  By(Tag.isold, false), By(Tag.doc, doc))
     .getOrElse{
-      Tag.create.name(user).doc(doc).saveMe 
+      Tag.create.name(user).doc(doc).time(TimeUtil.now).saveMe 
     }
   }
 
@@ -118,7 +129,7 @@ class LiquiDoc {
       }
     }
 
-    RedirectTo(linkUri(tag))
+    RedirectTo(linkUri(tag, true, false))
   }
 
   def linkUri(target : Tag, diff : Boolean = true, head : Boolean = false) 
@@ -133,7 +144,7 @@ class LiquiDoc {
 
   /** Format a tag as a permanent link to its content */
   def tagLink(tag : Tag) : NodeSeq = {
-    <a href={ linkUri(tag) }
+    <a href={ linkUri(tag, true, true) }
       class={if (tag==showTag) "tag active" else "tag inactive"}>{
       tag.name.is
     }</a>

@@ -1,7 +1,21 @@
 <lift:surround with="default">
   <lift:bind-at name="title"><lift:LiquiDoc.title/></lift:bind-at>
   <lift:bind-at name="header">
-    Most favored tags: <lift:LiquiDoc.score/>
+    <lift:LiquiDoc>
+      <table class="versions">
+	  <tr>
+	    <td>Main version:</td><td><doc:rootTag/></td>
+	  </tr>
+	  <test:hasHistory>
+	    <tr>
+	      <td>Compared version:</td><td><doc:showTag/></td>
+	    </tr>
+	  </test:hasHistory>
+	  <tr>
+	    <td>Most favored tags:</td><td><doc:score/></td>
+	  </tr>
+	</table>
+    </lift:LiquiDoc>
   </lift:bind-at>
   <lift:bind-at name="content">
     <lift:form  method="POST">

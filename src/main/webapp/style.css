@@ -1,6 +1,21 @@
 body {
     font-size: 11pt;
 }
+h1 {
+    margin: 5px 0 5px 0;
+    font-size: 16pt;
+}
+h2 {
+    margin: 0 0 2px 0;
+}
+td,th {
+    vertical-align: top;
+    padding: 1px;
+}
+td.td_bottom {
+    vertical-align: bottom;
+}
+
 .index {
     margin: 0 0 0 10px;
 }
@@ -14,18 +29,10 @@ body {
     padding: 10px;
     background-color: lightgray;
 }
-h1 {
-    font-size: 14pt;
-}
-h2 {
-    margin: 0 0 2px 0;
-}
-td,th {
-    vertical-align: top;
-    padding: 1px;
-}
-td.td_bottom {
-    vertical-align: bottom;
+.versions {
+    width: auto;
+    font-size: 8pt;
+    margin: 0px;
 }
 
 hr {
