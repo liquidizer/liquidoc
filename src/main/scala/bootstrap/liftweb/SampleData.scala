@@ -16,13 +16,6 @@ object SampleData {
 
   def update() {
     // loadManifesto(new File("manifesto.xml"))
-    for (tag <- Tag.findAll()) {
-      if (TagRef.find(By(TagRef.tag,tag)).isEmpty)
-	tag.delete_!
-    }
-    Content.find(By(Content.id, 525)).get.parent(Empty).save
-    val ref= TagRef.find(By(TagRef.content, 525)).get
-    TagRef.create.content(525).section(ref.section).save
   }
 
   def makeUpdateTag() {

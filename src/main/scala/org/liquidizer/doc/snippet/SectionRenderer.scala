@@ -48,7 +48,10 @@ extends Block[SectionRenderer] {
       s
     }
     // create a renderer for the new section
-    new SectionRenderer(doc, newSect)
+    val renderer= new SectionRenderer(doc, newSect)
+    if (!renderer.trees.isEmpty)
+      renderer.show= renderer.trees(0).cur
+    renderer
   }
 
   override def insertIcon() =
