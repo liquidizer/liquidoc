@@ -33,6 +33,7 @@ extends Block[SectionRenderer] {
     Section.findAll(ByList(Section.id, out))
   }
 
+  /** create a new block for the insert command */
   def newBlock() = {
     // if no section exists, create one
     var out= intersect(sec, next.map { _.get.sec })
@@ -53,6 +54,12 @@ extends Block[SectionRenderer] {
       renderer.show= renderer.trees(0).cur
     renderer
   }
+
+  def level(style : String) =
+    if (style.startsWith("h")) style.substring(1).toInt else 10
+
+  override def level() : Int = 
+    show.map { c => level(c.style.is) }.getOrElse(10)
 
   override def insertIcon() =
     if (intersect(sec, next.map {_.get.sec}).exists { 
@@ -84,8 +91,8 @@ extends Block[SectionRenderer] {
       <img src="/images/favor_active.png"/>  
   }
 
-  override def render(node : NodeSeq) : NodeSeq = {
-    bind(super.render(node))
+  override def renderContent() : NodeSeq = {
+    bind(super.renderContent)
   }
 
   def bind(node : NodeSeq) : NodeSeq = node.flatMap { bind(_) }
@@ -104,16 +111,15 @@ extends Block[SectionRenderer] {
     case _ => node
   }
 
-  def controlArea() : NodeSeq = <div id={"control_"+id}>{
-    editButton() ++ <br/> ++ super.renderDelete(id)
-  }</div>
+  def controlArea() : NodeSeq = 
+    renderIf(PseudoLogin.loggedIn && nextNotHidden, {
+      <div id={"control_"+id}>{
+          SHtml.a(()=> toEditMode(), editIcon()) ++
+          <br/> ++ 
+	  super.renderDelete()
+    }</div>})
 
   def favorButton() : NodeSeq = SHtml.a(() => favorShown(), favorIcon())
-
-  def editButton() : NodeSeq = 
-    if (!PseudoLogin.loggedIn) NodeSeq.Empty else {
-      SHtml.a(()=> toEditMode(), editIcon()) 
-    }
 
   def toEditMode() : JsCmd = {
     val curText= show.map {_.text.is}.getOrElse("")
@@ -174,7 +180,7 @@ extends Block[SectionRenderer] {
 
   def cancel() : JsCmd = {
     show= show.get.parent.obj
-    redraw
+    redraw(ref, show)
   }
 
   def favorShown() : JsCmd = {
@@ -197,15 +203,15 @@ extends Block[SectionRenderer] {
   }
 
   /** Insert action is blocked if an empty edit section exits */
-  override def insertBlock(id : String, node : NodeSeq) : JsCmd = {
+  override def insertBlock() : JsCmd = {
     if ((isEmpty || next.exists { _.get.isEmpty }) &&
       intersect(sec, next.map {_.get.sec}).isEmpty) Noop
-    else super.insertBlock(id, node)
+    else super.insertBlock()
   }
 
   /** Delete block strokes reference text or makes block disappear */
-  override def deleteBlock(id : String) : JsCmd = {
-    if (ref.isEmpty && show.isEmpty) super.deleteBlock(id)
+  override def deleteBlock() : JsCmd = {
+    if (ref.isEmpty && show.isEmpty) super.deleteBlock()
     else {
       trees= refreshTrees()
       if (show.isEmpty)
@@ -215,13 +221,10 @@ extends Block[SectionRenderer] {
     }
   }
 
-  def redraw() : JsCmd = redraw(show, show)
-
   def redraw(oldShow : Option[Content], newShow : Option[Content]) 
   : JsCmd = {
     show = newShow
     SetHtml("content"+id, content(oldShow, newShow)) &
-    SetHtml("edit"+id, editButton()) &
     SetHtml("branches"+id, branches())
   }
 
@@ -274,13 +277,13 @@ extends Block[SectionRenderer] {
   }
 
   def toHtml(trees : List[TagTree], total : Int) : NodeSeq = 
-    if (trees.isEmpty) NodeSeq.Empty else
+    renderIf (!trees.isEmpty,
       <ul> {
 	val h= trees.map { tree => <li> { toHtml(tree, total) } </li> }
 	val n= if (trees.exists(_.containsCurrent(show)))
 	  trees.takeWhile(!_.containsCurrent(show)).size + 2 else 0
 	new Uncover(h, 5).next("branchvar"+random.nextInt, 5 max n) 
-      } </ul>
+      } </ul>)
 
   def toHtml(tree : TagTree, n : Int) : NodeSeq = {
     val src= if (tree.isCurrent(show)) "active" else {
@@ -310,10 +313,10 @@ extends Block[SectionRenderer] {
       }
 
     // button to favor current view
-    val favor= if (PseudoLogin.loggedIn) {
+    val favor= renderIf(PseudoLogin.loggedIn, {
       if (tree.isCurrent(show)) 
 	favorButton() else <span style="margin: 0 20px 0 20px"/>
-    } else NodeSeq.Empty
+    })
 
     // cancat the answer
     icon ++ favor ++ subtree
@@ -321,12 +324,27 @@ extends Block[SectionRenderer] {
 
   /** Show a list of named tags */
   def tagList(tags : List[Tag], total : Int) : NodeSeq =
-    if (tags.size==0) NodeSeq.Empty else {
-      { if (tags.size==total) NodeSeq.Empty else
-	Text(" %2.0f%% ".format(100.0* tags.size/total)) } ++
+    renderIf (tags.size>0, {
+      { renderIf(tags.size < total,
+	Text(" %2.0f%% ".format(100.0* tags.size/total))) } ++
       new Uncover(tags.map { doc.tagLink(_) }, 3)
       .next(id+"li"+random.nextInt, 0)
+    })
+
+  /** Make a default collapse view */
+  def defaultCollapse(current : Int, list : List[SectionRenderer]= Nil) {
+    showLevel= current min level() 
+    if (ref!=show) {
+      showLevel= level()
+      for (renderer <- list)
+        renderer.showLevel= showLevel
     }
+    next.foreach { 
+      block =>
+      block.get.defaultCollapse(showLevel, this :: 
+        list.filter { _.level()< block.level() })
+    }
+  }
 
   def isEmpty() = ref.isEmpty && show.isEmpty
 }

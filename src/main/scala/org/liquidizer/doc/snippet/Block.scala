@@ -18,56 +18,98 @@ abstract class Block[T <: Block[T]] {
   var next : Option[Block[T]] = None
   var prev : Option[Block[T]] = None
 
+  var insertAt= id+"_insert_at"
+  var rootNode= NodeSeq.Empty
+  var showLevel= 10
+
   def newBlock() : Block[T]
   def get() = asInstanceOf[T]
   def toList() : List[T]= get() :: next.map { _.toList }.getOrElse(Nil)
 
   def insertIcon() : NodeSeq = Text("[insert]")
   def deleteIcon() : NodeSeq = Text("[delete]")
+  def openIcon() : NodeSeq = Text("[-]")
+  def closedIcon() : NodeSeq = Text("[+]")
+  def level() : Int
 
   def renderAll(node : NodeSeq) : NodeSeq =
     render(node) ++ next.map { _.renderAll(node) }.getOrElse(NodeSeq.Empty)
 
   def render(node : NodeSeq) : NodeSeq = {
-    div(id + "_deletable",
-	Helpers.bind("block", node,
-		     "id" -> Text(id.toString),
-		     "delete" -> renderDelete(id),
-		     "insert" -> renderInsert(id, node))
-      ) ++ renderInsertAt(id)
+    rootNode= node
+    div(id + "_main", renderContent())
   }
+
+  def isVisible() = showLevel >= level()
+  def nextNotHidden() = !next.exists{ !_.isVisible }
+
+  def renderContent() : NodeSeq =
+    renderIf(isVisible(), {
+    div(id + "_deletable",
+	Helpers.bind("block", rootNode,
+		     "delete" -> renderDelete(),
+		     "insert" -> renderInsert(),
+	             "collapse" -> renderCollapse())
+      ) ++ renderInsertAt()
+    })
 
   def div(id : String, node : NodeSeq) = 
     <div id={id}>{ node }</div>
 
-  def renderDelete(id : String) : NodeSeq = 
-    if (prev.isEmpty) NodeSeq.Empty else
-      SHtml.a(() => deleteBlock(id), deleteIcon())
+  def redraw() : JsCmd =
+    SetHtml(id+"_main", renderContent())
 
-  def renderInsert(id : String, node : NodeSeq) : NodeSeq = 
-    <span id={id+"_insert"}> {
-      SHtml.a(() => { insertBlock(id, node) }, insertIcon())
-    } </span>
+  def renderIf(condition : Boolean, node : NodeSeq) = 
+    if(condition) node else NodeSeq.Empty
+
+  def renderDelete() : NodeSeq = 
+    renderIf (!prev.isEmpty && nextNotHidden,
+        SHtml.a(() => deleteBlock(), deleteIcon()))
+
+  def renderInsert() : NodeSeq = 
+    renderIf(nextNotHidden,
+      SHtml.a(() => { insertBlock() }, insertIcon()))
   
-  def renderInsertAt(id : String) : NodeSeq =
-    div(id+"_insert_at", NodeSeq.Empty)
+  def renderInsertAt() : NodeSeq =
+    div(insertAt, NodeSeq.Empty)
 
-  def deleteBlock(id : String) : JsCmd = {
+  def renderCollapse() : NodeSeq =
+    if (level() >= 10) NodeSeq.Empty else
+      SHtml.a(()=> { toggleCollapse() }, {
+        if (showLevel <= level()) closedIcon() else openIcon })
+
+  def toggleCollapse() : JsCmd= {
+    val child= toList.tail.takeWhile{ _.level() > level()}
+    // determine new visibility level
+    if (showLevel <= level()) {
+      showLevel= child.map { _.level() }.foldLeft(10) { _ min _ }
+    }
+    else {
+      showLevel= level()
+    } 
+    println("new level "+showLevel)
+    child.foreach { _.showLevel= showLevel }
+    // create update command
+    child.map{ _.redraw() }
+    .foldLeft(redraw()) { _ & _ }
+  }
+
+  def deleteBlock() : JsCmd = {
     next.foreach { _.prev = prev }
     prev.foreach { _.next = next }
     SetHtml(id+"_insert", NodeSeq.Empty) &
     SetHtml(id+"_deletable", NodeSeq.Empty)
   }
 
-  def insertBlock(id : String, node : NodeSeq) : JsCmd = {
+  def insertBlock() : JsCmd = {
     val block= newBlock()
     block.prev= Some(this)
     block.next= next
     next.foreach { _.prev= Some(block) }
     next= Some(block)
-    SetHtml(id+"_insert", renderInsert(block.id+"_pre", node)) &
-    SetHtml(id+"_insert_at", renderInsertAt(block.id+"_pre") ++ 
-	    block.render(node))
+    val oldInsertAt= insertAt
+    insertAt= block.id+"_insert_pre"
+    SetHtml(oldInsertAt, renderInsertAt() ++ block.render(rootNode))
   }
 
   def append(block : Block[T]) {

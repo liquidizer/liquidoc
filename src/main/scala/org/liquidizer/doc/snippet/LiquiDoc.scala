@@ -85,6 +85,8 @@ class LiquiDoc {
 
   def render(sec : Section, node : NodeSeq) : NodeSeq = {
     buildSectionRenderers(sec)
+    if (showTag!=rootTag)
+      helpers.foreach { _.defaultCollapse(10) }
     helpers.get.renderAll(node)
   }
 
