@@ -71,7 +71,8 @@ class LiquiDoc {
 
     var list= List(sec.id.is)
     while (!list.isEmpty) {
-      val a= Link.findAll(ByList(Link.pre, list)).map { _.post.obj.get }
+      val a= Link.findAll(ByList(Link.pre, list))
+      .map { _.post.obj.get }
       val b= Link.findAll(ByList(Link.pre, a.map { _.id.is }))
       .map { _.post.obj.get }
       for (nsec <- (a--b)) {
@@ -152,6 +153,6 @@ class LiquiDoc {
     }</a>
   }
 
-}
+ }
 
 

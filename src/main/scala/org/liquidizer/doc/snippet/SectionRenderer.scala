@@ -63,13 +63,12 @@ extends Block[SectionRenderer] {
 
   override def insertIcon() =
     if (intersect(sec, next.map {_.get.sec}).exists { 
-      isec => !TagRef.find(By(TagRef.section, isec)).isEmpty})
+      isec => 
+        !TagRef.find(By(TagRef.section, isec)).isEmpty})
       <img src="/images/insert_active.png" alt="insert"/>
     else {
-      if (PseudoLogin.loggedIn)
-	<img src="/images/insert.png" alt="insert" title="insert"/>
-      else 
-	NodeSeq.Empty
+      renderIf(PseudoLogin.loggedIn,
+	<img src="/images/insert.png" alt="insert" title="insert"/>)
     }
 
   override def deleteIcon() =

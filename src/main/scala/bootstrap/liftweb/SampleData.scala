@@ -16,6 +16,46 @@ object SampleData {
 
   def update() {
     // loadManifesto(new File("manifesto.xml"))
+    val names= Tag.findAll.map { _.name.is }.removeDuplicates.filter(!_.trim.isEmpty)
+    println(names)
+    val MANIFESTO="Parteiprogramm"
+    if (Document.find(By(Document.name, MANIFESTO)).isEmpty) {
+    val docs= Document.findAll.slice(0,16)
+
+    val doc= Document.create.name(MANIFESTO)
+    doc.head(docs(0).head)
+    doc.save
+
+    val secs= docs.flatMap { sec => sec.getSections().filter {_.id.is<250} }
+    for (i <- 0 to secs.size-2) {
+      val link= Link.find(By(Link.pre, secs(i)), By(Link.post,secs(i+1)))
+      println(secs(i).id.is+" -> "+secs(i+1).id.is)
+      if (link.isEmpty && secs(i).id.is<secs(i+1).id.is) {
+	Link.create.pre(secs(i)).post(secs(i+1)).save
+      }
+    }
+
+    val todelete= Tag.findAll(ByList(Tag.doc, docs.map{_.id.is}))
+    val tagMap= Map(names.map {
+      name => (name, {
+        val time=Tag.findAll(By(Tag.name, name)).map{_.time.is}.foldLeft(0L){_ max _}
+        Tag.create.name(name).time(time).doc(doc).saveMe
+	})
+	}:_*)
+    println(tagMap)
+    for (ref <- TagRef.findAll) {
+      val refTag= ref.tag.obj
+      if (refTag.exists { d => docs.contains(d.doc.obj.get) }) {
+        if (refTag.exists {_.isold} || !refTag.exists{!_.name.is.isEmpty}) {
+          ref.delete_!
+        } else {
+          ref.tag(tagMap.get(refTag.get.name.is).get).save
+        }
+      }
+    }
+    todelete.foreach {_.delete_!}
+    docs.foreach {_.delete_!}
+  }
   }
 
   def makeUpdateTag() {
