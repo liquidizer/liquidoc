@@ -17,6 +17,7 @@ abstract class Block[T <: Block[T]] {
 
   var next : Option[Block[T]] = None
   var prev : Option[Block[T]] = None
+  var number: Option[List[Int]]= None
 
   var insertAt= id+"_insert_at"
   var rootNode= NodeSeq.Empty
@@ -36,6 +37,7 @@ abstract class Block[T <: Block[T]] {
     render(node) ++ next.map { _.renderAll(node) }.getOrElse(NodeSeq.Empty)
 
   def render(node : NodeSeq) : NodeSeq = {
+    reNumber
     rootNode= node
     div(id + "_main", renderContent())
   }
@@ -56,44 +58,79 @@ abstract class Block[T <: Block[T]] {
   def div(id : String, node : NodeSeq) = 
     <div id={id}>{ node }</div>
 
+  /** Rerender all of this block */
   def redraw() : JsCmd =
     SetHtml(id+"_main", renderContent())
 
+  /** Only render this node if a condition holds */
   def renderIf(condition : Boolean, node : NodeSeq) = 
     if(condition) node else NodeSeq.Empty
 
+  /** Format the hierarchical block number to String*/
+  def formatNumber() =
+    number.getOrElse(number.get).slice(0,level()).mkString(".")
+
+  /** render the replacable container for the block number */
+  def renderNumber() =
+    <span id={id+"_number"}>{ formatNumber() }</span>
+
+  /** recount the numbering */
+  def reNumber() : JsCmd = {
+    var n= prev.map { _.number.get }.getOrElse{ List(0,0,0,0,0) }
+    if (level() < n.length) {
+      n = n.slice(0, level()-1) ++
+      List(n(level()-1)+1) ++ List(0,0,0,0,0)
+    } 
+    if (!number.exists { _ == n }) {
+      number= Some(n)
+      SetHtml(id+"_number", Text(formatNumber)) &
+      next.map{ _.reNumber() }.getOrElse{ Noop }
+    } else {
+      Noop
+    }
+  }
+
+  /** render a delete button for this block */
   def renderDelete() : NodeSeq = 
     renderIf (!prev.isEmpty && nextNotHidden,
         SHtml.a(() => deleteBlock(), deleteIcon()))
 
+  /** render a button to insert a new block */
   def renderInsert() : NodeSeq = 
     renderIf(nextNotHidden,
       SHtml.a(() => { insertBlock() }, insertIcon()))
   
+  /** render an area into which new blocks are to be inserted */
   def renderInsertAt() : NodeSeq =
     div(insertAt, NodeSeq.Empty)
 
+  /** render a button to collapse and expand sections */
   def renderCollapse() : NodeSeq =
     if (level() >= 10) NodeSeq.Empty else
       SHtml.a(()=> { toggleCollapse() }, {
         if (showLevel <= level()) closedIcon() else openIcon })
 
+  /** Collapse and expand subsequent sections */
   def toggleCollapse() : JsCmd= {
     val child= toList.tail.takeWhile{ _.level() > level()}
     // determine new visibility level
     if (showLevel <= level()) {
-      showLevel= child.map { _.level() }.foldLeft(10) { _ min _ }
+      showLevel= 10
+      for (block <- child) {
+	showLevel= showLevel min block.level()
+	block.showLevel= showLevel
+      }
     }
     else {
       showLevel= level()
+      child.foreach { _.showLevel= showLevel }
     } 
-    println("new level "+showLevel)
-    child.foreach { _.showLevel= showLevel }
     // create update command
     child.map{ _.redraw() }
     .foldLeft(redraw()) { _ & _ }
   }
 
+  /** Delete this block */
   def deleteBlock() : JsCmd = {
     next.foreach { _.prev = prev }
     prev.foreach { _.next = next }
@@ -101,6 +138,7 @@ abstract class Block[T <: Block[T]] {
     SetHtml(id+"_deletable", NodeSeq.Empty)
   }
 
+  /** Insert a new block after this one */
   def insertBlock() : JsCmd = {
     val block= newBlock()
     block.prev= Some(this)
@@ -112,6 +150,7 @@ abstract class Block[T <: Block[T]] {
     SetHtml(oldInsertAt, renderInsertAt() ++ block.render(rootNode))
   }
 
+  /** Append a block to the linked block list */
   def append(block : Block[T]) {
     if (next.isEmpty) {
       next= Some(block)

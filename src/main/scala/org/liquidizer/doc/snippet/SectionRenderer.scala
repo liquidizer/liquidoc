@@ -112,6 +112,7 @@ extends Block[SectionRenderer] {
 
   def controlArea() : NodeSeq = 
     renderIf(PseudoLogin.loggedIn && nextNotHidden, {
+      showDiff= true
       <div id={"control_"+id}>{
           SHtml.a(()=> toEditMode(), editIcon()) ++
           <br/> ++ 
@@ -223,6 +224,7 @@ extends Block[SectionRenderer] {
   def redraw(oldShow : Option[Content], newShow : Option[Content]) 
   : JsCmd = {
     show = newShow
+    reNumber() &
     SetHtml("content"+id, content(oldShow, newShow)) &
     SetHtml("branches"+id, branches())
   }
@@ -254,6 +256,10 @@ extends Block[SectionRenderer] {
       }</td><td> {
 	body
       }</td></tr></table>
+    case "h1" | "h2" | "h3" | "h4" => 
+      <div class={"section-"+style}> { 
+	renderNumber() ++ Text(" ") ++ body 
+      } </div>
     case _ => <div class={"section-"+style}> { body } </div>
   }
 
