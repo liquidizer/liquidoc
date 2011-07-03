@@ -22,6 +22,7 @@ extends Block[SectionRenderer] {
   var lastEdit : Box[Content]= None
   var trees= refreshTrees()
   var showDiff= true
+  var olNumber= 0
 
   /** find existing sections cutting two existing ones */
   def intersect(pre : Section, post : Option[Section]) : List[Section]= {
@@ -55,12 +56,26 @@ extends Block[SectionRenderer] {
     renderer
   }
 
+  /** Section level based on style */
   def level(style : String) =
     if (style.startsWith("h")) style.substring(1).toInt else 10
 
+  /** Section level based on style shown style */
   override def level() : Int = 
     show.map { c => level(c.style.is) }.getOrElse(10)
 
+  /** Recounts section numbers, including enumerated lists */
+  override def reNumber(always : Boolean) : JsCmd = {
+    val oldOl= olNumber
+    if (show.exists(_.style.is == "ol"))
+      olNumber = prev.map { _.get.olNumber + 1 }.getOrElse(0)
+    else
+      olNumber = 0
+    SetHtml(id+"_number", Text(olNumber+".")) &
+    super.reNumber(oldOl != olNumber)
+  }
+
+  /** Icon is colorized based on existing content in other versions */
   override def insertIcon() =
     if (intersect(sec, next.map {_.get.sec}).exists { 
       isec => 
@@ -251,8 +266,11 @@ extends Block[SectionRenderer] {
   
   def format(style : String, body : NodeSeq) : NodeSeq = style match {
     case "ol" | "ul" =>
-      <table><tr><td class="section-li">{ 
-	if (style=="ol") "#" else "*" 
+      <table><tr><td width="1em"/><td class="section-li">{ 
+	if (style=="ol") 
+	  <span id={id+"_number"}>{olNumber+"."}</span> 
+	else 
+	  Text("\u2022")
       }</td><td> {
 	body
       }</td></tr></table>

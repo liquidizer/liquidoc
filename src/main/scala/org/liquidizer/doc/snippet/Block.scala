@@ -37,7 +37,7 @@ abstract class Block[T <: Block[T]] {
     render(node) ++ next.map { _.renderAll(node) }.getOrElse(NodeSeq.Empty)
 
   def render(node : NodeSeq) : NodeSeq = {
-    reNumber
+    reNumber()
     rootNode= node
     div(id + "_main", renderContent())
   }
@@ -68,22 +68,23 @@ abstract class Block[T <: Block[T]] {
 
   /** Format the hierarchical block number to String*/
   def formatNumber() =
-    number.getOrElse(number.get).slice(0,level()).mkString(".")
+    number.get.slice(0,level()).mkString(".")
 
   /** render the replacable container for the block number */
   def renderNumber() =
     <span class="headno" id={id+"_number"}>{ formatNumber() }</span>
 
+
   /** recount the numbering */
-  def reNumber() : JsCmd = {
+  def reNumber(always : Boolean = false) : JsCmd = {
     var n= prev.map { _.number.get }.getOrElse{ List(0,0,0,0,0) }
     if (level() < n.length) {
       n = n.slice(0, level()-1) ++
       List(n(level()-1)+1) ++ List(0,0,0,0,0)
     } 
-    if (!number.exists { _ == n }) {
+    if (always || !number.exists { _ == n }) {
       number= Some(n)
-      SetHtml(id+"_number", Text(formatNumber)) &
+      (if (level()<10) SetHtml(id+"_number", Text(formatNumber)) else Noop)&
       next.map{ _.reNumber() }.getOrElse{ Noop }
     } else {
       Noop
@@ -115,7 +116,7 @@ abstract class Block[T <: Block[T]] {
     val child= toList.tail.takeWhile{ _.level() > level()}
     // determine new visibility level
     if (isCollapsed()) {
-      showLevel= 10
+      showLevel= 100
       for (block <- child) {
 	showLevel= showLevel min block.level()
 	block.showLevel= showLevel

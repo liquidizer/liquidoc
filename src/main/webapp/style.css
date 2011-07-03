@@ -109,7 +109,10 @@ a {
     margin: 0 2em 0 0;
     font-size: 14pt;
 }
-
+.section-li {
+    color: #CC0000;
+    width: 3em;
+}
 .section-h1 {
     font-size: 18pt;
     font-weight : bold;
@@ -125,7 +128,4 @@ a {
 .section-p {
     font-size: 11pt;
     margin: 0 0 10px 0;
-}
-.section-li {
-    width: 3em;
 }
