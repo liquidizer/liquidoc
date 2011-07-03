@@ -43,7 +43,7 @@ abstract class Block[T <: Block[T]] {
   }
 
   def isVisible() = showLevel >= level()
-  def nextNotHidden() = !next.exists{ !_.isVisible }
+  def isCollapsed() = next.exists { !_.isVisible() }
 
   def renderContent() : NodeSeq =
     renderIf(isVisible(), {
@@ -72,7 +72,7 @@ abstract class Block[T <: Block[T]] {
 
   /** render the replacable container for the block number */
   def renderNumber() =
-    <span id={id+"_number"}>{ formatNumber() }</span>
+    <span class="headno" id={id+"_number"}>{ formatNumber() }</span>
 
   /** recount the numbering */
   def reNumber() : JsCmd = {
@@ -92,12 +92,12 @@ abstract class Block[T <: Block[T]] {
 
   /** render a delete button for this block */
   def renderDelete() : NodeSeq = 
-    renderIf (!prev.isEmpty && nextNotHidden,
+    renderIf (!prev.isEmpty && !isCollapsed(),
         SHtml.a(() => deleteBlock(), deleteIcon()))
 
   /** render a button to insert a new block */
   def renderInsert() : NodeSeq = 
-    renderIf(nextNotHidden,
+    renderIf(!isCollapsed,
       SHtml.a(() => { insertBlock() }, insertIcon()))
   
   /** render an area into which new blocks are to be inserted */
@@ -108,13 +108,13 @@ abstract class Block[T <: Block[T]] {
   def renderCollapse() : NodeSeq =
     if (level() >= 10) NodeSeq.Empty else
       SHtml.a(()=> { toggleCollapse() }, {
-        if (showLevel <= level()) closedIcon() else openIcon })
+        if (isCollapsed()) closedIcon() else openIcon })
 
   /** Collapse and expand subsequent sections */
   def toggleCollapse() : JsCmd= {
     val child= toList.tail.takeWhile{ _.level() > level()}
     // determine new visibility level
-    if (showLevel <= level()) {
+    if (isCollapsed()) {
       showLevel= 10
       for (block <- child) {
 	showLevel= showLevel min block.level()

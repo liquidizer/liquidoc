@@ -111,7 +111,7 @@ extends Block[SectionRenderer] {
   }
 
   def controlArea() : NodeSeq = 
-    renderIf(PseudoLogin.loggedIn && nextNotHidden, {
+    renderIf(PseudoLogin.loggedIn && !isCollapsed, {
       showDiff= true
       <div id={"control_"+id}>{
           SHtml.a(()=> toEditMode(), editIcon()) ++
@@ -258,7 +258,7 @@ extends Block[SectionRenderer] {
       }</td></tr></table>
     case "h1" | "h2" | "h3" | "h4" => 
       <div class={"section-"+style}> { 
-	renderNumber() ++ Text(" ") ++ body 
+	renderNumber() ++ body 
       } </div>
     case _ => <div class={"section-"+style}> { body } </div>
   }
@@ -347,7 +347,7 @@ extends Block[SectionRenderer] {
     next.foreach { 
       block =>
       block.get.defaultCollapse(showLevel, this :: 
-        list.filter { _.level()< block.level() })
+        list.filter { _.level() <= level() })
     }
   }
 
