@@ -39,28 +39,25 @@ abstract class Block[T <: Block[T]] {
   def render(node : NodeSeq) : NodeSeq = {
     reNumber()
     rootNode= node
-    div(id + "_main", renderContent())
+    div(id + "_deletable", renderContent) ++ renderInsertAt()
   }
 
   def isVisible() = showLevel >= level()
   def isCollapsed() = next.exists { !_.isVisible() }
 
   def renderContent() : NodeSeq =
-    renderIf(isVisible(), {
-    div(id + "_deletable",
-	Helpers.bind("block", rootNode,
-		     "delete" -> renderDelete(),
-		     "insert" -> renderInsert(),
-	             "collapse" -> renderCollapse())
-      ) ++ renderInsertAt()
-    })
+    renderIf(isVisible(),
+	     Helpers.bind("block", rootNode,
+			  "delete" -> renderDelete(),
+			  "insert" -> renderInsert(),
+			  "collapse" -> renderCollapse()))
 
   def div(id : String, node : NodeSeq) = 
     <div id={id}>{ node }</div>
 
   /** Rerender all of this block */
   def redraw() : JsCmd =
-    SetHtml(id+"_main", renderContent())
+    SetHtml(id+"_deletable", renderContent())
 
   /** Only render this node if a condition holds */
   def renderIf(condition : Boolean, node : NodeSeq) = 
@@ -135,6 +132,7 @@ abstract class Block[T <: Block[T]] {
   def deleteBlock() : JsCmd = {
     next.foreach { _.prev = prev }
     prev.foreach { _.next = next }
+    (prev.map { _.redraw() }.getOrElse { Noop }) &
     SetHtml(id+"_insert", NodeSeq.Empty) &
     SetHtml(id+"_deletable", NodeSeq.Empty)
   }
@@ -148,6 +146,7 @@ abstract class Block[T <: Block[T]] {
     next= Some(block)
     val oldInsertAt= insertAt
     insertAt= block.id+"_insert_pre"
+    redraw() &
     SetHtml(oldInsertAt, renderInsertAt() ++ block.render(rootNode))
   }
 

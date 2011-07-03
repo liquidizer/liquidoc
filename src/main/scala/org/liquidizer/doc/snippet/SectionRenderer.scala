@@ -24,20 +24,11 @@ extends Block[SectionRenderer] {
   var showDiff= true
   var olNumber= 0
 
-  /** find existing sections cutting two existing ones */
-  def intersect(pre : Section, post : Option[Section]) : List[Section]= {
-    var out= Link.findAll(By(Link.pre, pre)).map { _.post.is }
-    if (!post.isEmpty) {
-      var in= Link.findAll(By(Link.post, post.get)).map { _.pre.is }
-      out= out intersect in
-    }
-    Section.findAll(ByList(Section.id, out))
-  }
-
   /** create a new block for the insert command */
   def newBlock() = {
     // if no section exists, create one
-    var out= intersect(sec, next.map { _.get.sec })
+    doc.getLinks(true)
+    var out= doc.intersect(sec, next.map { _.get.sec })
     val newSect= out.firstOption
     .getOrElse { 
       val s= Section.create
@@ -47,6 +38,7 @@ extends Block[SectionRenderer] {
 	val post= next.get.get.sec
 	Link.create.pre(s).post(post).save
       }
+      doc.getLinks(true)
       s
     }
     // create a renderer for the new section
@@ -71,13 +63,13 @@ extends Block[SectionRenderer] {
       olNumber = prev.map { _.get.olNumber + 1 }.getOrElse(0)
     else
       olNumber = 0
-    SetHtml(id+"_number", Text(olNumber+".")) &
+    SetHtml(id+"_ol", Text(olNumber+".")) &
     super.reNumber(oldOl != olNumber)
   }
 
   /** Icon is colorized based on existing content in other versions */
   override def insertIcon() =
-    if (intersect(sec, next.map {_.get.sec}).exists { 
+    if (doc.intersect(sec, next.map {_.get.sec}).exists { 
       isec => 
         !TagRef.find(By(TagRef.section, isec)).isEmpty})
       <img src="/images/insert_active.png" alt="insert"/>
@@ -220,7 +212,7 @@ extends Block[SectionRenderer] {
   /** Insert action is blocked if an empty edit section exits */
   override def insertBlock() : JsCmd = {
     if ((isEmpty || next.exists { _.get.isEmpty }) &&
-      intersect(sec, next.map {_.get.sec}).isEmpty) Noop
+      doc.intersect(sec, next.map {_.get.sec}).isEmpty) Noop
     else super.insertBlock()
   }
 
@@ -268,7 +260,7 @@ extends Block[SectionRenderer] {
     case "ol" | "ul" =>
       <table><tr><td width="1em"/><td class="section-li">{ 
 	if (style=="ol") 
-	  <span id={id+"_number"}>{olNumber+"."}</span> 
+	  <span id={id+"_ol"}>{olNumber+"."}</span> 
 	else 
 	  Text("\u2022")
       }</td><td> {

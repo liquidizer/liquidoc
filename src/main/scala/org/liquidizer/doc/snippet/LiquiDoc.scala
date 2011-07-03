@@ -30,6 +30,7 @@ class LiquiDoc {
   val showTag= showId.map( Tag.get(_, doc).get).getOrElse(rootTag)
 
   var helpers : Option[SectionRenderer] = None
+  var links : List[Link] = Nil
 
   def title(node : NodeSeq) : NodeSeq = 
     Text(doc.name.is)
@@ -71,9 +72,9 @@ class LiquiDoc {
 
     var list= List(sec.id.is)
     while (!list.isEmpty) {
-      val a= Link.findAll(ByList(Link.pre, list))
+      val a= getLinks().filter(l => list.contains(l.pre.is) )
       .map { _.post.obj.get }
-      val b= Link.findAll(ByList(Link.pre, a.map { _.id.is }))
+      val b= getLinks().filter(l => a.map { _.id.is }.contains(l.pre.is))
       .map { _.post.obj.get }
       for (nsec <- (a--b)) {
 	val helper= new SectionRenderer(this, nsec)
@@ -153,6 +154,22 @@ class LiquiDoc {
     }</a>
   }
 
- }
+  /** Load all Links */
+  def getLinks(forceReload : Boolean = false) : List[Link] = 
+    if (!forceReload && !links.isEmpty) links else {
+      val secs= doc.getSections()
+      links= Link.findAll(ByList(Link.pre, secs.map{_.id.is}))
+      links
+  }
 
+  /** find existing sections cutting two existing ones */
+  def intersect(pre : Section, post : Option[Section]) : List[Section]= {
+    var out= getLinks().filter( _.pre==pre).map { _.post.is }
+    if (!post.isEmpty) {
+      var in= getLinks().filter( _.post==post.get).map { _.pre.is }
+      out= out intersect in
+    }
+    Section.findAll(ByList(Section.id, out))
+  }
+}
 
