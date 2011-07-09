@@ -106,8 +106,13 @@ a {
 
 .headno {
     color: #CC0000;
-    margin: 0 2em 0 0;
+    width: 100px;
     font-size: 14pt;
+    font-weight: bold;
+}
+.headno a {
+   color: #CC0000;
+   margin: 0 5px 0 0;
 }
 .section-li {
     color: #CC0000;
@@ -119,7 +124,6 @@ a {
 }
 .section-h2 {
     font-size: 16pt;
-    font-weight : bold;
 }
 .section-h3 {
     font-size: 14pt;

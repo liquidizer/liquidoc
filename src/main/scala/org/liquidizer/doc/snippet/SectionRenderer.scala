@@ -267,9 +267,11 @@ extends Block[SectionRenderer] {
 	body
       }</td></tr></table>
     case "h1" | "h2" | "h3" | "h4" => 
-      <div class={"section-"+style}> { 
-	renderNumber() ++ body 
-      } </div>
+      <table><tr><td class="headno"> { 
+	renderCollapse() ++ renderNumber() 
+      }</td><td class={"section-"+style}> { 
+        body 
+      }</td></tr></table>
     case _ => <div class={"section-"+style}> { body } </div>
   }
 
@@ -352,7 +354,7 @@ extends Block[SectionRenderer] {
     if (ref!=show) {
       showLevel= level()
       for (renderer <- list)
-        renderer.showLevel= showLevel
+        renderer.showLevel= renderer.showLevel max showLevel
     }
     next.foreach { 
       block =>

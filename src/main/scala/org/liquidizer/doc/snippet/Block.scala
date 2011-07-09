@@ -69,7 +69,7 @@ abstract class Block[T <: Block[T]] {
 
   /** render the replacable container for the block number */
   def renderNumber() =
-    <span class="headno" id={id+"_number"}>{ formatNumber() }</span>
+    <span id={id+"_number"}>{ formatNumber() }</span>
 
 
   /** recount the numbering */

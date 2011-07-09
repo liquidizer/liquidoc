@@ -64,7 +64,7 @@ class LiquiDoc {
 
   def renderScore(node : NodeSeq) : NodeSeq = {
     val links= DocTagVoter.voterTags(doc).flatMap { tagLink(_) }
-    new Uncover(links, 3).next("score", 5)
+    new Uncover(links, 5).next("score", 10)
   }
 
   def buildSectionRenderers(sec : Section) {
@@ -114,7 +114,7 @@ class LiquiDoc {
 
   def makeTag() : JsCmd = {
     val name= PseudoLogin.userName
-    val tag = Tag.create.name(name).doc(doc).isold(true)
+    val tag = Tag.create.name(name).doc(doc).isold(true).time(TimeUtil.now)
     var pre : Option[Section] = None
 
     // vote for all shown sections
