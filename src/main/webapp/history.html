@@ -1,0 +1,17 @@
+<lift:surround with="default">
+  <lift:bind-at name="title">Document Index</lift:bind-at>
+  <lift:bind-at name="content">
+    <lift:LiquiDocHistory>
+      <div class="index">
+	<doc:time/>
+	<br/>
+	<doc:content/>
+	<br/>
+	<doc:supporter/>
+      </div>
+      <hr/>
+    </lift:LiquiDocHistory>
+  </lift:bind-at>
+</lift:surround>
+
+

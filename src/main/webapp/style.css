@@ -104,6 +104,10 @@ a {
     color: orange;
 }
 
+.time {
+    color: gray;
+}
+
 .headno {
     color: #CC0000;
     width: 100px;

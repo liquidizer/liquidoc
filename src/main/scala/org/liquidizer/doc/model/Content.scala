@@ -6,6 +6,7 @@ import _root_.net.liftweb.common._
 
 class Content extends LongKeyedMapper[Content] with IdPK {
   def getSingleton = Content
+  object time extends MappedLong(this)
   object parent extends LongMappedMapper(this, Content)
   object style extends MappedString(this, 30)
   object text extends MappedText(this)

@@ -15,7 +15,17 @@ object SampleData {
   var tag : Option[Tag]= None
 
   def update() {
-    // loadManifesto(new File("manifesto.xml"))
+    val contents= Content.findAll(NullRef(Content.time));
+    for (c <- contents) {
+      val refs= TagRef.findAll(By(TagRef.content, c),
+			     NotNullRef(TagRef.tag));
+      val times= refs.map { _.tag.obj.get.time.is }
+      if (!times.isEmpty) {
+	val time= times.reduceRight( _ min _ )
+	c.time(time)
+	c.save();
+      }
+    }
   }
 
   def makeUpdateTag() {

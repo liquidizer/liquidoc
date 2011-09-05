@@ -132,7 +132,8 @@ extends Block[SectionRenderer] {
     val curText= show.map {_.text.is}.getOrElse("")
     val curStyle= show.map {_.style.is}.getOrElse("p")
     show= Some(Content.create.parent(show.or(ref))
-	       .text(curText).style(curStyle))
+	       .text(curText).style(curStyle)
+	       .time(TimeUtil.now))
     SetHtml("content"+id, editArea())
   }
 
