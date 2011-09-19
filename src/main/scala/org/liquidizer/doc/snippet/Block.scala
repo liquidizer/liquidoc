@@ -29,8 +29,8 @@ abstract class Block[T <: Block[T]] {
 
   def insertIcon() : NodeSeq = Text("[insert]")
   def deleteIcon() : NodeSeq = Text("[delete]")
-  def openIcon() : NodeSeq = Text("[-]")
-  def closedIcon() : NodeSeq = Text("[+]")
+  def openIcon() : NodeSeq = <img src="/images/minus.png"/>
+  def closedIcon() : NodeSeq = <img src="/images/plus.png"/>
   def level() : Int
 
   def renderAll(node : NodeSeq) : NodeSeq =

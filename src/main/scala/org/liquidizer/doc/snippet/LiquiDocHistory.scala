@@ -32,6 +32,7 @@ class LiquiDocHistory {
 	case "time" => formatTime(content)
 	case "content" => formatContent(content)
 	case "supporter" => formatSupporter(content)
+	case "title" => formatDocument(content)
       }
 
       case Elem(prefix, label, attribs, scope, children @ _*) =>
@@ -62,6 +63,20 @@ class LiquiDocHistory {
       Text(content.text.is)
     else 
       DiffRenderer.renderDiff(oldContent.get.text.is, content.text.is)
+  }
+
+  def formatDocument(content : Content) : NodeSeq = {
+    val ref= TagRef.find(By(TagRef.content, content), 
+			 NotNullRef(TagRef.tag));
+    if (ref.isEmpty) {
+      NodeSeq.Empty
+    } else {
+      val tag= ref.get.tag.obj.get
+      val doc= tag.doc.obj.get
+      <a href={"/doc/"+Helpers.urlEncode(doc.name.is)}>{
+	doc.name.is
+      }</a>
+    }
   }
 
   def formatSupporter(content : Content) : NodeSeq = {
